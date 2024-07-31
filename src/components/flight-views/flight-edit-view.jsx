@@ -158,6 +158,7 @@ export default class FlightEditView extends React.Component {
   }
 
   handleAddNewSite() {
+    this.setState();
     this.props.history.push({
       pathname: `/${encodeURIComponent(SiteModel.keys.single)}/0/edit`,
       state: { takeoffCoords: this.state.takeoffCoords }
@@ -399,10 +400,11 @@ export default class FlightEditView extends React.Component {
 
   renderNewSiteNotice() {
     if (this.state.showNewSiteNotice && this.state.takeoffCoords) {
+      const coords = Util.stringToCoordinates(this.state.takeoffCoords);
       return (
         <Notice
           isPadded={true}
-          text={'No site near takeoff coordinates (' + this.state.takeoffCoords + ') found. Create new site?'}
+          text={'No site near takeoff coordinates (' + coords.lat.toFixed(6) + ', ' + coords.lng.toFixed(6) + ') found. Create new site?'}
           buttonText={'Create new'}
           onClick={this.handleAddNewSite}
           onClose={() => this.setState({ showNewSiteNotice: false })}
