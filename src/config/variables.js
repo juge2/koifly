@@ -21,7 +21,7 @@ const SERVER_PROTOCOL = secrets.protocol;
 const SERVER_HTTPS_PORT = secrets.port.https;
 const SERVER_HTTP_PORT = secrets.port.http;
 
-const DEV_SERVER_HOST = '0.0.0.0';
+const DEV_SERVER_HOST = '127.0.0.1';
 const DEV_SERVER_PROTOCOL = 'http';
 const DEV_SERVER_PORT = 3000;
 const WEBPACK_DEV_SERVER_PORT = 3001;

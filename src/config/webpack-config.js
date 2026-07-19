@@ -5,6 +5,7 @@ const webpack = require('webpack');
 const webpackMerge = require('webpack-merge'); // concatenates arrays for the same key instead of replacing the first array
 const AssetsWebpackPlugin = require('assets-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
+const ESLintPlugin = require('eslint-webpack-plugin');
 const OptimizeCSSAssetsPlugin = require('optimize-css-assets-webpack-plugin');
 const TerserPlugin = require('terser-webpack-plugin');
 const config = require('./variables');
@@ -97,21 +98,12 @@ if (process.env.NODE_ENV === 'development') {
       sandbox: [WEBPACK_HOT_ENTRY, REACT_HOT_ENTRY, path.join(config.paths.source, 'main-sandbox')]
     },
     devtool: 'cheap-module-eval-source-map', // Generate source maps (more or less efficiently)
-    module: {
-      rules: [
-        {
-          enforce: 'pre', // Lint all JS files before compiling the bundles (see .eslintrc for rules)
-          test: /\.(js|jsx)$/,
-          loader: 'eslint-loader',
-          include: config.paths.source,
-          options: {
-            failOnError: true,
-            formatter: require('eslint/lib/cli-engine/formatters/stylish')
-          }
-        }
-      ]
-    },
     plugins: [
+      new ESLintPlugin({
+        extensions: ['js', 'jsx'],
+        failOnError: true,
+        formatter: require('eslint/lib/cli-engine/formatters/stylish')
+      }),
       new webpack.HotModuleReplacementPlugin() // Enables HMR.
     ]
   });
@@ -125,7 +117,7 @@ if (process.env.NODE_ENV === 'development') {
       // so we have to also specify a JS minimizer.
       minimize: true,
       minimizer: [new TerserPlugin({ sourceMap: true }), new OptimizeCSSAssetsPlugin({})]
-    },
+    }
   });
 }
 

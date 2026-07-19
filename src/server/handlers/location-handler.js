@@ -13,7 +13,7 @@ function locationHandler(request, reply) {
   const url = 'https://maps.googleapis.com/maps/api/geocode/json';
   const queryParams = {
     latlng: request.query.latLngString,
-    key: secrets.googleServerSideApiKey,
+    key: secrets.googleServerSideApiKey
   };
 
   return axios

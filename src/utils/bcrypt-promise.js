@@ -1,30 +1,17 @@
-import Bcrypt from 'bcrypt';
+import bcrypt from 'bcrypt';
 
 const BCRYPT_ROUNDS = require('../secrets').bcryptRounds;
 
 
 const BcryptPromise = {
-  hash: function(password) {
-    return new Promise((resolve, reject) => {
-      Bcrypt.hash(password, BCRYPT_ROUNDS, (err, hash) => {
-        if (hash && !err) {
-          resolve(hash);
-          return;
-        }
-        reject(err);
-      });
-    });
+  hash(password) {
+    return bcrypt.hash(password, BCRYPT_ROUNDS);
   },
 
-  compare: function(newPassword, hash) {
-    return new Promise((resolve, reject) => {
-      Bcrypt.compare(newPassword, hash, (err, res) => {
-        if (res && !err) {
-          resolve();
-          return;
-        }
-        reject(err);
-      });
+  compare(newPassword, hash) {
+    return bcrypt.compare(newPassword, hash).then(isMatch => {
+      if (isMatch) return;
+      throw new Error('password mismatch');
     });
   }
 };

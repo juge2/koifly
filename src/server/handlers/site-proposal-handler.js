@@ -13,7 +13,7 @@ function siteProposalHandler(request, reply) {
   const queryParams = {
     lat: request.query.lat,
     lng: request.query.lng,
-    distance: request.query.dist,
+    distance: request.query.dist
   };
 
   return axios

@@ -50,7 +50,7 @@ function importFlightsHandler(request) {
 
   // Parse base64 encoded csv file content into utf8 string
   const encodedCsvString = request.payload.encodedContent.replace('data:text/csv;base64,', '');
-  const csvString = new Buffer(encodedCsvString, 'base64').toString('utf8');
+  const csvString = Buffer.from(encodedCsvString, 'base64').toString('utf8');
 
   // When import succeeds we reply with numbers of added records to the DB.
   const counts = {

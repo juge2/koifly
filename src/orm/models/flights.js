@@ -34,7 +34,7 @@ const Flight = db.define(
     time: {
       type: Sequelize.TIME,
       allowNull: true,
-      defaultValue: null,
+      defaultValue: null
     },
 
     siteId: {

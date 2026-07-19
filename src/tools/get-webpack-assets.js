@@ -25,11 +25,14 @@ if (process.env.NODE_ENV === 'production') {
   const chalk = require('chalk');
 
   getWebpackAssets = () => {
-    // On dev we read the file every time we need it. Not efficient, but easy to work with.
-    const fileContents = fs.readFileSync(assetsJsonPath).toString();
     try {
+      const fileContents = fs.readFileSync(assetsJsonPath).toString();
       return JSON.parse(fileContents);
     } catch (err) {
+      if (err.code === 'ENOENT') {
+        console.log(chalk.yellow('WAIT: ' + config.webpack.assetsFilename + ' not found - webpack may still be compiling'));
+        return { runtime: {}, vendors: {}, app: {} };
+      }
       console.log(chalk.red('ERROR: Could not parse ' + config.webpack.assetsFilename + ' - maybe webpack is still processing?'));
       throw err;
     }

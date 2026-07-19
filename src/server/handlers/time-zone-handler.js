@@ -14,7 +14,7 @@ function timeZoneHandler(request, reply) {
   const queryParams = {
     location: request.query.latLngString,
     timestamp: request.query.timestampInSec,
-    key: secrets.googleServerSideApiKey,
+    key: secrets.googleServerSideApiKey
   };
 
   return axios
