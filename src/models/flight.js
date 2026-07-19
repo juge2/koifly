@@ -1,5 +1,6 @@
 import Altitude from '../utils/altitude';
 import BaseModel from './base-model';
+import dataService from '../services/data-service';
 import GliderModel from './glider';
 import SiteModel from './site';
 import Util from '../utils/util';
@@ -83,6 +84,7 @@ let FlightModel = {
         siteName: flight.siteId ? SiteModel.getSiteName(flight.siteId) : null,
         altitude: Altitude.getAltitudeInPilotUnits(flight.altitude),
         airtime: flight.airtime,
+        pilotName: flight.pilotName,
         createdAt: flight.createdAt
       };
     });
@@ -120,7 +122,9 @@ let FlightModel = {
       airtime: flight.airtime,
       remarks: flight.remarks,
       igc: flight.igc,
-      igcFileName: flight.igcFileName
+      igcFileName: flight.igcFileName,
+      pilotName: flight.pilotName,
+      pilotId: flight.pilotId
     };
   },
 
@@ -175,7 +179,8 @@ let FlightModel = {
       return storeContent;
     }
 
-    let lastFlight = this.getLastFlight();
+    const pilotId = dataService.store.pilot && dataService.store.pilot.id;
+    let lastFlight = this.getLastFlight(pilotId);
     if (lastFlight === null) {
       // Take default flight properties
       lastFlight = {
@@ -238,10 +243,14 @@ let FlightModel = {
    * if several flights were on the same date the latest will be the one which was created the last
    * @returns {object|null} - last flight or null if no flights yet
    */
-  getLastFlight() {
+  getLastFlight(pilotId) {
     let lastFlight = null;
 
     Object.values(this.getStoreContent() || {}).forEach(flight => {
+      if (pilotId && flight.pilotId !== pilotId) {
+        return;
+      }
+
       if (lastFlight === null ||
         flight.date > lastFlight.date ||
         (flight.date.substring(0, 10) === lastFlight.date.substring(0, 10) &&
@@ -273,6 +282,11 @@ let FlightModel = {
     };
 
     Object.values(this.getStoreContent() || {}).forEach(flight => {
+      // Only count flights from the same pilot
+      if (flight.pilotId !== targetFlight.pilotId) {
+        return;
+      }
+
       // Don't increment anything if it's our target flight or it was performed after our target flight
       if (flight.id === targetFlight.id ||
         flight.date.substring(0, 10) > targetFlight.date.substring(0, 10)
@@ -325,8 +339,8 @@ let FlightModel = {
   /**
    * @returns {number|null} - days passed since the last flight
    */
-  getDaysSinceLastFlight() {
-    const lastFlight = this.getLastFlight();
+  getDaysSinceLastFlight(pilotId) {
+    const lastFlight = this.getLastFlight(pilotId);
 
     if (lastFlight === null) {
       return null;
@@ -336,15 +350,27 @@ let FlightModel = {
     return Math.floor(millisecondsSince / (24 * 60 * 60 * 1000));
   },
 
-  getNumberOfFlights() {
-    return Object.keys(this.getStoreContent()).length;
+  getPilotId() {
+    return dataService.store.pilot && dataService.store.pilot.id;
   },
 
-  getNumberOfFlightsThisYear() {
+  getFlightsByPilot(pilotId) {
+    const currentPilotId = pilotId || this.getPilotId();
+    if (!currentPilotId) {
+      return Object.values(this.getStoreContent() || {});
+    }
+    return Object.values(this.getStoreContent() || {}).filter(f => f.pilotId === currentPilotId);
+  },
+
+  getNumberOfFlights(pilotId) {
+    return this.getFlightsByPilot(pilotId).length;
+  },
+
+  getNumberOfFlightsThisYear(pilotId) {
     const date = new Date();
     const year = date.getFullYear();
 
-    return Object.values(this.getStoreContent() || {})
+    return this.getFlightsByPilot(pilotId)
       .reduce(
         (numberOfFlights, flight) => {
           if (flight.date.substring(0, 4) === year.toString()) {
@@ -403,8 +429,8 @@ let FlightModel = {
   /**
    * @returns {number} - number of sites which pilot flew at and has flight record in App
    */
-  getNumberOfVisitedSites() {
-    return Object.values(this.getStoreContent() || {})
+  getNumberOfVisitedSites(pilotId) {
+    return this.getFlightsByPilot(pilotId)
       .reduce(
         Util.uniqueValues('siteId'),
         []
@@ -415,8 +441,8 @@ let FlightModel = {
   /**
    * @returns {number} - number of gliders which pilot used and has flight record in App
    */
-  getNumberOfUsedGliders() {
-    return Object.values(this.getStoreContent() || {})
+  getNumberOfUsedGliders(pilotId) {
+    return this.getFlightsByPilot(pilotId)
       .reduce(
         Util.uniqueValues('gliderId'),
         []
@@ -427,8 +453,8 @@ let FlightModel = {
   /**
    * @returns {number} - airtime of all flights recorded in App
    */
-  getTotalAirtime() {
-    const flights = Object.values(this.getStoreContent() || {});
+  getTotalAirtime(pilotId) {
+    const flights = this.getFlightsByPilot(pilotId);
     return flights.reduce((sum, { airtime }) => (sum + airtime), 0);
   },
 

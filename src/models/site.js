@@ -132,7 +132,9 @@ let SiteModel = {
       launchType: site.launchType,
       flightNum: flightStats.total,
       flightNumThisYear: flightStats.thisYear,
-      remarks: site.remarks
+      remarks: site.remarks,
+      pilotName: site.pilotName,
+      pilotId: site.pilotId
     };
   },
 

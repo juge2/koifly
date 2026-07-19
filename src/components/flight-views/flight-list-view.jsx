@@ -1,6 +1,7 @@
 import React from 'react';
 import Altitude from '../../utils/altitude';
 import Button from '../common/buttons/button';
+import dataService from '../../services/data-service';
 import DesktopTopGrid from '../common/grids/desktop-top-grid';
 import EmptyList from '../common/empty-list';
 import ErrorBox from '../common/notice/error-box';
@@ -18,12 +19,24 @@ import View from '../common/view';
 export default class FlightListView extends React.Component {
   constructor() {
     super();
+    let saved;
+    try { saved = JSON.parse(localStorage.getItem('koifly-flight-column-filters')); } catch (e) { /* ignore */ }
     this.state = {
-      items: null, // no data received
-      loadingError: null
+      items: null,
+      loadingError: null,
+      columnFilters: saved || {}
     };
 
     this.handleStoreModified = this.handleStoreModified.bind(this);
+    this.handleColumnFilterChange = this.handleColumnFilterChange.bind(this);
+  }
+
+  handleColumnFilterChange(columnKey, filterValue) {
+    this.setState(prev => {
+      const columnFilters = Object.assign({}, prev.columnFilters, { [columnKey]: filterValue });
+      localStorage.setItem('koifly-flight-column-filters', JSON.stringify(columnFilters));
+      return { columnFilters };
+    });
   }
 
   /**
@@ -95,40 +108,56 @@ export default class FlightListView extends React.Component {
         key: 'formattedDate',
         label: 'Date',
         defaultSortingDirection: false,
-        sortingKey: 'date',
-        secondarySortingKey: 'time'
+        sortingKey: 'dateNum',
+        secondarySortingKey: 'time',
+        filter: { type: 'range' }
       },
       {
         key: 'siteName',
         label: 'Site',
-        defaultSortingDirection: true
+        defaultSortingDirection: true,
+        filter: { type: 'select' }
+      },
+      {
+        key: 'pilotName',
+        label: 'Pilot',
+        defaultSortingDirection: true,
+        filter: { type: 'select' }
       },
       {
         key: 'formattedAltitude',
         label: 'Altitude',
         defaultSortingDirection: false,
-        sortingKey: 'altitude'
+        sortingKey: 'altitude',
+        filter: { type: 'range' }
       },
       {
         key: 'formattedAirtime',
         label: 'Airtime',
         defaultSortingDirection: false,
-        sortingKey: 'airtime'
+        sortingKey: 'airtime',
+        filter: { type: 'range' }
       }
     ];
 
     const rows = (this.state.items || []).map(flight => (
       Object.assign({}, flight, {
+        dateNum: Number(flight.date.replace(/-/g, '')),
         formattedDate: Util.formatDateAndTime(flight.date, flight.time),
         formattedAltitude: Altitude.formatAltitudeShort(flight.altitude),
         formattedAirtime: Util.formatTime(flight.airtime)
       })
     ));
 
+    const currentPilotName = dataService.store.pilot && (dataService.store.pilot.userName || dataService.store.pilot.email);
+
     return (
       <Table
         columns={columns}
         rows={rows}
+        columnFilters={this.state.columnFilters}
+        onColumnFilterChange={this.handleColumnFilterChange}
+        currentPilotName={currentPilotName}
         initialSortingField='date'
         onRowClick={this.handleRowClick}
       />

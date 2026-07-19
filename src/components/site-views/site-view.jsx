@@ -3,6 +3,7 @@ import { shape, string } from 'prop-types';
 import { Link } from 'react-router-dom';
 import Altitude from '../../utils/altitude';
 import BreadCrumbs from '../common/bread-crumbs';
+import dataService from '../../services/data-service';
 import ErrorBox from '../common/notice/error-box';
 import mapConstants from '../../constants/map-constants';
 import MobileTopMenu from '../common/menu/mobile-top-menu';
@@ -86,12 +87,13 @@ export default class SiteView extends React.Component {
   }
 
   renderMobileTopMenu() {
+    const isOwnItem = this.state.item.pilotId === dataService.store.pilot.id;
     return (
       <MobileTopMenu
         leftButtonCaption='Back'
-        rightButtonCaption='Edit'
+        rightButtonCaption={isOwnItem ? 'Edit' : undefined}
         onLeftClick={this.handleGoToListView}
-        onRightClick={this.handleEditItem}
+        onRightClick={isOwnItem ? this.handleEditItem : undefined}
       />
     );
   }
@@ -127,7 +129,7 @@ export default class SiteView extends React.Component {
         {this.renderMobileTopMenu()}
         {this.renderNavigationMenu()}
 
-        <Section onEditClick={this.handleEditItem}>
+        <Section onEditClick={this.state.item.pilotId === dataService.store.pilot.id ? this.handleEditItem : undefined}>
           <BreadCrumbs
             elements={[
               <Link to='/sites'>Sites</Link>,

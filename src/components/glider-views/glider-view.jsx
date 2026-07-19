@@ -2,6 +2,7 @@ import React from 'react';
 import { shape, string } from 'prop-types';
 import { Link } from 'react-router-dom';
 import BreadCrumbs from '../common/bread-crumbs';
+import dataService from '../../services/data-service';
 import ErrorBox from '../common/notice/error-box';
 import GliderModel from '../../models/glider';
 import MobileTopMenu from '../common/menu/mobile-top-menu';
@@ -83,12 +84,13 @@ export default class GliderView extends React.Component {
   }
 
   renderMobileTopMenu() {
+    const isOwnItem = this.state.item.pilotId === dataService.store.pilot.id;
     return (
       <MobileTopMenu
         leftButtonCaption='Back'
-        rightButtonCaption='Edit'
+        rightButtonCaption={isOwnItem ? 'Edit' : undefined}
         onLeftClick={this.handleGoToListView}
-        onRightClick={this.handleEditItem}
+        onRightClick={isOwnItem ? this.handleEditItem : undefined}
       />
     );
   }
@@ -112,7 +114,7 @@ export default class GliderView extends React.Component {
         {this.renderMobileTopMenu()}
         {this.renderNavigationMenu()}
 
-        <Section onEditClick={this.handleEditItem}>
+        <Section onEditClick={this.state.item.pilotId === dataService.store.pilot.id ? this.handleEditItem : undefined}>
           <BreadCrumbs
             elements={[
               <Link to='/gliders'>Gliders</Link>,

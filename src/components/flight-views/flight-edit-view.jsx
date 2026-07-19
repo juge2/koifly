@@ -514,6 +514,7 @@ export default class FlightEditView extends React.Component {
                 labelText='Glider:'
                 inputName='gliderId'
                 emptyValue={'0'}
+                noSort={true}
                 errorMessage={this.state.validationErrors.gliderId}
                 onChangeFunc={(inputName, inputValue) => {
                   this.handleInputChange(inputName, inputValue === '0' ? null : inputValue);

@@ -17,6 +17,7 @@ const Vision = require('@hapi/vision');
 const Url = require('url');
 
 const AuthCookie = require('@hapi/cookie');
+const buddyHandler = require('./server/handlers/buddy-handler').default;
 const setAuthCookie = require('./server/helpers/set-auth-cookie').default;
 const checkAuthCookie = require('./server/auth-handlers/check-auth-cookie').default;
 const checkCsrfToken = require('./server/auth-handlers/check-csrf-token').default;
@@ -288,6 +289,26 @@ async function start() {
       }
     },
     handler: importFlightsHandler
+  });
+
+  server.route({
+    method: 'GET',
+    path: '/api/buddies/{action}',
+    options: {
+      auth: 'session',
+      pre: [ checkCsrfToken ]
+    },
+    handler: buddyHandler
+  });
+
+  server.route({
+    method: 'POST',
+    path: '/api/buddies/{action}',
+    options: {
+      auth: 'session',
+      pre: [ checkCsrfToken ]
+    },
+    handler: buddyHandler
   });
 
   server.route({

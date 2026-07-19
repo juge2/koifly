@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import Altitude from '../../utils/altitude';
 import BreadCrumbs from '../common/bread-crumbs';
 import Button from '../common/buttons/button';
+import dataService from '../../services/data-service';
 import DesktopBottomGrid from '../common/grids/desktop-bottom-grid';
 import ErrorBox from '../common/notice/error-box';
 import FightMapAndCharts from './flight-map-and-charts';
@@ -101,12 +102,13 @@ export default class FlightView extends React.Component {
   }
 
   renderMobileTopMenu() {
+    const isOwnItem = this.state.item.pilotId === dataService.store.pilot.id;
     return (
       <MobileTopMenu
         leftButtonCaption='Back'
-        rightButtonCaption='Edit'
+        rightButtonCaption={isOwnItem ? 'Edit' : undefined}
         onLeftClick={this.handleGoToListView}
-        onRightClick={this.handleEditItem}
+        onRightClick={isOwnItem ? this.handleEditItem : undefined}
       />
     );
   }
@@ -157,7 +159,7 @@ export default class FlightView extends React.Component {
         {this.renderMobileTopMenu()}
         {this.renderNavigationMenu()}
 
-        <Section onEditClick={this.handleEditItem}>
+        <Section onEditClick={this.state.item.pilotId === dataService.store.pilot.id ? this.handleEditItem : undefined}>
           <BreadCrumbs
             elements={[
               <Link to='/flights'>Flights</Link>,
@@ -167,6 +169,8 @@ export default class FlightView extends React.Component {
 
           <SectionTitle>
             <div>
+              {this.state.item.pilotId !== dataService.store.pilot.id &&
+                this.state.item.pilotName + ': '}
               {Util.formatDateAndTime(this.state.item.date, this.state.item.time)}
             </div>
             <div>{this.state.item.siteName}</div>

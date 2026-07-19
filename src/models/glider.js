@@ -1,4 +1,5 @@
 import BaseModel from './base-model';
+import dataService from '../services/data-service';
 import Util from '../utils/util';
 
 
@@ -74,6 +75,7 @@ let GliderModel = {
       return {
         id: glider.id,
         name: glider.name,
+        pilotName: glider.pilotName,
         trueFlightNum: glider.initialFlightNum + FlightModel.getNumberOfFlightsOnGlider(glider.id).total,
         trueAirtime: glider.initialAirtime + FlightModel.getGliderAirtime(glider.id)
       };
@@ -108,7 +110,9 @@ let GliderModel = {
       initialAirtime: glider.initialAirtime,
       trueFlightNum: trueFlightNum,
       trueAirtime: glider.initialAirtime + FlightModel.getGliderAirtime(glider.id),
-      flightNumThisYear: flightNumThisYear
+      flightNumThisYear: flightNumThisYear,
+      pilotName: glider.pilotName,
+      pilotId: glider.pilotId
     };
   },
 
@@ -215,7 +219,29 @@ let GliderModel = {
    * @returns {Array} - array of objects where value is glider id, text is glider name
    */
   getGliderValueTextList() {
-    return Object.values(this.getStoreContent() || {}).map(Util.valueTextPairs('id', 'name'));
+    const gliders = Object.values(this.getStoreContent() || {});
+    const currentPilotId = dataService.store.pilot && dataService.store.pilot.id;
+
+    const own = [];
+    const buddy = [];
+
+    gliders.forEach(g => {
+      if (g.pilotId === currentPilotId) {
+        own.push({ value: g.id, text: g.name });
+      } else {
+        const label = g.pilotName || 'Unknown';
+        buddy.push({ value: g.id, text: g.name + ' (' + label + ')' });
+      }
+    });
+
+    const result = [];
+    own.forEach(o => result.push(o));
+    if (own.length > 0 && buddy.length > 0) {
+      result.push({ value: '--', text: '---', disabled: true });
+    }
+    buddy.forEach(b => result.push(b));
+
+    return result;
   }
 };
 

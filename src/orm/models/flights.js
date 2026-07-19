@@ -131,7 +131,7 @@ const Flight = db.define(
         const siteErrorMsg = errorMessages.NOT_EXIST.replace('%field', 'Site');
 
         return Promise.all([
-          isValidId(Glider, instance.gliderId, instance.pilotId, gliderErrorMsg, options.transaction),
+          isValidId(Glider, instance.gliderId, null, gliderErrorMsg, options.transaction),
           isValidId(Site, instance.siteId, null, siteErrorMsg, options.transaction)
         ]);
       }

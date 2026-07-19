@@ -1,6 +1,7 @@
 import React from 'react';
-import { arrayOf, bool, func, number, shape, string } from 'prop-types';
+import { arrayOf, bool, func, number, object, shape, string } from 'prop-types';
 import orderBy from 'lodash.orderby';
+import ColumnFilter from './column-filter';
 import Util from '../../utils/util';
 
 require('./table.less');
@@ -16,6 +17,7 @@ export default class Table extends React.Component {
 
     this.handleSorting = this.handleSorting.bind(this);
     this.handleRowClick = this.handleRowClick.bind(this);
+    this.handleColumnFilterChange = this.handleColumnFilterChange.bind(this);
   }
 
   handleSorting(newSortingField) {
@@ -41,12 +43,16 @@ export default class Table extends React.Component {
     }
   }
 
+  handleColumnFilterChange(columnKey, filterValue) {
+    if (this.props.onColumnFilterChange) {
+      this.props.onColumnFilterChange(columnKey, filterValue);
+    }
+  }
+
   getDefaultSortingDirection(fieldName) {
     let sortingDirection = true;
     for (let i = 0; i < this.props.columns.length; i++) {
       const column = this.props.columns[i];
-      // If sortingKey column property presents, compare it to fieldName
-      // otherwise compare fieldName with key property
       if ((column.sortingKey && column.sortingKey === fieldName) ||
         (!column.sortingKey && column.key === fieldName)
       ) {
@@ -57,9 +63,40 @@ export default class Table extends React.Component {
     return sortingDirection;
   }
 
+  getFilteredRows() {
+    const filters = this.props.columnFilters || {};
+    let rows = this.props.rows;
+
+    Object.keys(filters).forEach(columnKey => {
+      const filterValue = filters[columnKey];
+      if (filterValue === undefined || filterValue === null || filterValue === 'All') return;
+      if (Array.isArray(filterValue) && filterValue.length === 0) return;
+      if (typeof filterValue === 'object' && filterValue.from === '' && filterValue.to === '') return;
+
+      const column = this.props.columns.find(c => c.key === columnKey);
+      if (!column || !column.filter) return;
+
+      if (column.filter.type === 'select') {
+        const dataKey = column.sortingKey || column.key;
+        const selected = Array.isArray(filterValue) ? filterValue : [filterValue];
+        rows = rows.filter(row => selected.includes(String(row[dataKey])));
+      } else if (column.filter.type === 'range') {
+        const dataKey = column.sortingKey || column.key;
+        rows = rows.filter(row => {
+          const val = Number(row[dataKey]);
+          if (isNaN(val)) return true;
+          if (filterValue.from !== '' && val < Number(filterValue.from)) return false;
+          if (filterValue.to !== '' && val > Number(filterValue.to)) return false;
+          return true;
+        });
+      }
+    });
+
+    return rows;
+  }
+
   getSortingRows() {
     const sortingOrder = this.state.sortingDirection ? 'asc' : 'desc';
-    // Sort is case insensitive
     const iteratees = [ row => Util.upperCaseString(row[this.state.sortingField]) ];
     const orders = [ sortingOrder ];
 
@@ -69,7 +106,7 @@ export default class Table extends React.Component {
       orders.push(sortingOrder);
     }
 
-    return orderBy(this.props.rows, iteratees, orders);
+    return orderBy(this.getFilteredRows(), iteratees, orders);
   }
 
   render() {
@@ -89,8 +126,15 @@ export default class Table extends React.Component {
           key={'column-' + column.key}
           onClick={() => this.handleSorting(column.sortingKey || column.key)}
         >
-          {column.label}
+          <span className='th-label'>{column.label}</span>
           <span className={arrowClassName}>{arrow}</span>
+          <ColumnFilter
+            column={column}
+            rows={this.props.rows}
+            value={(this.props.columnFilters || {})[column.key]}
+            onChange={this.handleColumnFilterChange}
+            currentPilotName={this.props.currentPilotName}
+          />
         </th>
       );
     });
@@ -137,8 +181,12 @@ Table.propTypes = {
     key: string.isRequired,
     label: string.isRequired,
     defaultSortingDirection: bool.isRequired,
-    sortingKey: string
+    sortingKey: string,
+    filter: object
   })).isRequired,
+  columnFilters: object,
+  onColumnFilterChange: func,
+  currentPilotName: string,
   initialSortingField: string.isRequired,
   onRowClick: func
 };

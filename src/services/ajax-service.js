@@ -43,20 +43,12 @@ const ajaxService = {
       data.csrf = csrfCookie;
     }
 
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[AJAX] ->', options.method, options.url);
-    }
-
     return new Promise((resolve, reject) => {
       const ajaxRequest = new XMLHttpRequest();
       ajaxRequest.timeout = dataServiceConstants.TIMEOUT;
 
       // If we got response from the server
       ajaxRequest.addEventListener('load', () => {
-        if (process.env.NODE_ENV === 'development') {
-          console.log('[AJAX] <-', options.method, options.url, 'status:', ajaxRequest.status);
-        }
-
         if (ajaxRequest.status === 401) {
           reject(new KoiflyError(errorTypes.AUTHENTICATION_ERROR));
           return;
@@ -68,10 +60,6 @@ const ajaxService = {
         }
 
         const serverResponse = JSON.parse(ajaxRequest.responseText);
-
-        if (process.env.NODE_ENV === 'development') {
-          console.log('server response:', serverResponse);
-        }
 
         if (!serverResponse.error) {
           resolve(serverResponse);

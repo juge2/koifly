@@ -48,7 +48,7 @@ export default class Dropdown extends React.Component {
           onBlur={this.props.onBlur}
         >
           {sortedOptions.map(option => (
-            <option key={option.value} value={option.value}>
+            <option key={option.value} value={option.value} disabled={option.disabled}>
               {option.text}
             </option>
           ))}

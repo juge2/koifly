@@ -12,7 +12,8 @@ const DataService = function() {
     pilot: null,
     flights: null,
     sites: null,
-    gliders: null
+    gliders: null,
+    buddies: null
   };
 };
 
@@ -201,6 +202,58 @@ DataService.prototype.importFlights = function(dataUri) {
     });
 };
 
+DataService.prototype.getBuddies = function() {
+  return ajaxService
+    .get('/api/buddies/list')
+    .then(serverResponse => {
+      this.store.buddies = {};
+      serverResponse.forEach(buddy => {
+        this.store.buddies[buddy.id] = buddy;
+      });
+      this.emit();
+      return serverResponse;
+    });
+};
+
+DataService.prototype.inviteBuddy = function(email) {
+  return ajaxService
+    .post('/api/buddies/invite', { email: email })
+    .then(serverResponse => {
+      this.store.buddies = {};
+      serverResponse.forEach(buddy => {
+        this.store.buddies[buddy.id] = buddy;
+      });
+      this.emit();
+      return serverResponse;
+    });
+};
+
+DataService.prototype.respondToBuddy = function(buddyId, status) {
+  return ajaxService
+    .post('/api/buddies/respond', { buddyId: buddyId, status: status })
+    .then(serverResponse => {
+      this.store.buddies = {};
+      serverResponse.forEach(buddy => {
+        this.store.buddies[buddy.id] = buddy;
+      });
+      this.emit();
+      return serverResponse;
+    });
+};
+
+DataService.prototype.removeBuddy = function(buddyId) {
+  return ajaxService
+    .post('/api/buddies/remove', { buddyId: buddyId })
+    .then(serverResponse => {
+      this.store.buddies = {};
+      serverResponse.forEach(buddy => {
+        this.store.buddies[buddy.id] = buddy;
+      });
+      this.emit();
+      return serverResponse;
+    });
+};
+
 /**
  * Gets timezone details from coordinates and timestamp. Currently, server uses Google Maps API.
  * @param {string} latLngString – Coordinates in "lat,lng" format.
@@ -288,6 +341,14 @@ DataService.prototype.populateStore = function(serverResponse) {
     Object.keys(serverResponse).forEach(key => {
       if (key === 'pilot') {
         this.addPilotInfo(serverResponse[key]);
+        return;
+      }
+
+      if (key === 'buddies') {
+        this.store.buddies = {};
+        (serverResponse[key] || []).forEach(item => {
+          this.store.buddies[item.id] = item;
+        });
         return;
       }
 

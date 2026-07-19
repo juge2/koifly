@@ -1,6 +1,7 @@
 import React from 'react';
 import Altitude from '../../utils/altitude';
 import Button from '../common/buttons/button';
+import dataService from '../../services/data-service';
 import DesktopTopGrid from '../common/grids/desktop-top-grid';
 import EmptyList from '../common/empty-list';
 import ErrorBox from '../common/notice/error-box';
@@ -19,12 +20,24 @@ require('./site-list-view.less');
 export default class SiteListView extends React.Component {
   constructor() {
     super();
+    let saved;
+    try { saved = JSON.parse(localStorage.getItem('koifly-site-column-filters')); } catch (e) { /* ignore */ }
     this.state = {
-      items: null, // no data received
-      loadingError: null
+      items: null,
+      loadingError: null,
+      columnFilters: saved || {}
     };
 
     this.handleStoreModified = this.handleStoreModified.bind(this);
+    this.handleColumnFilterChange = this.handleColumnFilterChange.bind(this);
+  }
+
+  handleColumnFilterChange(columnKey, filterValue) {
+    this.setState(prev => {
+      const columnFilters = Object.assign({}, prev.columnFilters, { [columnKey]: filterValue });
+      localStorage.setItem('koifly-site-column-filters', JSON.stringify(columnFilters));
+      return { columnFilters };
+    });
   }
 
   /**
@@ -110,23 +123,27 @@ export default class SiteListView extends React.Component {
       {
         key: 'name',
         label: 'Name',
-        defaultSortingDirection: true
+        defaultSortingDirection: true,
+        filter: { type: 'select' }
       },
       {
         key: 'location',
         label: 'Location',
-        defaultSortingDirection: true
+        defaultSortingDirection: true,
+        filter: { type: 'select' }
       },
       {
         key: 'formattedAltitude',
         label: 'Altitude',
         defaultSortingDirection: false,
-        sortingKey: 'launchAltitude'
+        sortingKey: 'launchAltitude',
+        filter: { type: 'range' }
       },
       {
         key: 'launchType',
         label: 'Launch',
-        defaultSortingDirection: true
+        defaultSortingDirection: true,
+        filter: { type: 'select' }
       }
     ];
 
@@ -137,10 +154,15 @@ export default class SiteListView extends React.Component {
       })
     ));
 
+    const currentPilotName = dataService.store.pilot && (dataService.store.pilot.userName || dataService.store.pilot.email);
+
     return (
       <Table
         columns={columnsConfig}
         rows={rows}
+        columnFilters={this.state.columnFilters}
+        onColumnFilterChange={this.handleColumnFilterChange}
+        currentPilotName={currentPilotName}
         initialSortingField='name'
         onRowClick={this.handleRowClick}
       />

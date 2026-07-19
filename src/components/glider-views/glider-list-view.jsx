@@ -1,5 +1,6 @@
 import React from 'react';
 import Button from '../common/buttons/button';
+import dataService from '../../services/data-service';
 import DesktopTopGrid from '../common/grids/desktop-top-grid';
 import EmptyList from '../common/empty-list';
 import ErrorBox from '../common/notice/error-box';
@@ -17,12 +18,24 @@ import View from '../common/view';
 export default class GliderListView extends React.Component {
   constructor() {
     super();
+    let saved;
+    try { saved = JSON.parse(localStorage.getItem('koifly-glider-column-filters')); } catch (e) { /* ignore */ }
     this.state = {
-      items: null, // no data received
-      loadingError: null
+      items: null,
+      loadingError: null,
+      columnFilters: saved || {}
     };
 
     this.handleStoreModified = this.handleStoreModified.bind(this);
+    this.handleColumnFilterChange = this.handleColumnFilterChange.bind(this);
+  }
+
+  handleColumnFilterChange(columnKey, filterValue) {
+    this.setState(prev => {
+      const columnFilters = Object.assign({}, prev.columnFilters, { [columnKey]: filterValue });
+      localStorage.setItem('koifly-glider-column-filters', JSON.stringify(columnFilters));
+      return { columnFilters };
+    });
   }
 
   /**
@@ -93,18 +106,27 @@ export default class GliderListView extends React.Component {
       {
         key: 'name',
         label: 'Name',
-        defaultSortingDirection: true
+        defaultSortingDirection: true,
+        filter: { type: 'select' }
+      },
+      {
+        key: 'pilotName',
+        label: 'Pilot',
+        defaultSortingDirection: true,
+        filter: { type: 'select' }
       },
       {
         key: 'trueFlightNum',
         label: 'Flights',
-        defaultSortingDirection: false
+        defaultSortingDirection: false,
+        filter: { type: 'range' }
       },
       {
         key: 'formattedAirtime',
         label: 'Airtime',
         defaultSortingDirection: false,
-        sortingKey: 'trueAirtime'
+        sortingKey: 'trueAirtime',
+        filter: { type: 'range' }
       }
     ];
 
@@ -114,10 +136,15 @@ export default class GliderListView extends React.Component {
       })
     ));
 
+    const currentPilotName = dataService.store.pilot && (dataService.store.pilot.userName || dataService.store.pilot.email);
+
     return (
       <Table
         columns={columnsConfig}
         rows={rows}
+        columnFilters={this.state.columnFilters}
+        onColumnFilterChange={this.handleColumnFilterChange}
+        currentPilotName={currentPilotName}
         initialSortingField='name'
         onRowClick={this.handleRowClick}
       />
