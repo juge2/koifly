@@ -155,6 +155,13 @@ export default class SiteView extends React.Component {
 
           <SectionRow>
             <RowContent
+              label='Launch type:'
+              value={this.state.item.launchType === 'winch' ? 'Winch tow' : 'Foot launch'}
+            />
+          </SectionRow>
+
+          <SectionRow>
+            <RowContent
               label='Coordinates:'
               value={this.state.item.coordinates ? this.state.item.coordinates : '—'}
             />

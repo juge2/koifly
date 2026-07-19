@@ -146,7 +146,8 @@ function saveSite(data, pilotId) {
       launchAltitude: data.launchAltitude,
       lat: data.lat,
       lng: data.lng,
-      remarks: data.remarks
+      remarks: data.remarks,
+      launchType: data.launchType
     };
   }
 

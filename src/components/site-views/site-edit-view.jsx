@@ -8,6 +8,7 @@ import dataService from '../../services/data-service';
 import Distance from '../../utils/distance';
 import DesktopBottomGrid from '../common/grids/desktop-bottom-grid';
 import DomUtil from '../../utils/dom-util';
+import DropdownInput from '../common/inputs/dropdown-input';
 import ErrorBox from '../common/notice/error-box';
 import errorTypes from '../../errors/error-types';
 import InteractiveMap from '../common/maps/interactive-map';
@@ -38,6 +39,7 @@ export default class SiteEditView extends React.Component {
       launchAltitude: null,
       location: null,
       coordinates: null,
+      launchType: null,
       remarks: null
     };
 
@@ -607,6 +609,23 @@ export default class SiteEditView extends React.Component {
                 inputName='launchAltitude'
                 errorMessage={this.state.validationErrors.launchAltitude}
                 onChange={this.handleInputChange}
+                onFocus={this.handleInputFocus}
+                onBlur={this.handleInputBlur}
+              />
+            </SectionRow>
+
+            <SectionRow>
+              <DropdownInput
+                selectedValue={this.state.item.launchType}
+                options={[
+                  { value: 'foot', text: 'Foot launch' },
+                  { value: 'winch', text: 'Winch tow' }
+                ]}
+                labelText='Launch type:'
+                inputName='launchType'
+                noSort={true}
+                errorMessage={this.state.validationErrors.launchType}
+                onChangeFunc={this.handleInputChange}
                 onFocus={this.handleInputFocus}
                 onBlur={this.handleInputBlur}
               />

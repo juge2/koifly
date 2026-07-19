@@ -122,12 +122,18 @@ export default class SiteListView extends React.Component {
         label: 'Altitude',
         defaultSortingDirection: false,
         sortingKey: 'launchAltitude'
+      },
+      {
+        key: 'launchType',
+        label: 'Launch',
+        defaultSortingDirection: true
       }
     ];
 
     const rows = (this.state.items || []).map(site => (
       Object.assign({}, site, {
-        formattedAltitude: Altitude.formatAltitudeShort(site.launchAltitude)
+        formattedAltitude: Altitude.formatAltitudeShort(site.launchAltitude),
+        launchType: site.launchType === 'winch' ? 'Winch' : 'Foot'
       })
     ));
 

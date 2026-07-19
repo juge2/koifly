@@ -47,6 +47,13 @@ let SiteModel = {
         field: 'Launch Altitude'
       }
     },
+    launchType: {
+      method: 'text',
+      rules: {
+        defaultVal: 'foot',
+        field: 'Launch type'
+      }
+    },
     remarks: {
       method: 'text',
       rules: {
@@ -89,6 +96,7 @@ let SiteModel = {
         location: site.location,
         launchAltitude: Altitude.getAltitudeInPilotUnits(site.launchAltitude),
         altitudeUnit: Altitude.getUserAltitudeUnit(),
+        launchType: site.launchType,
         latLng: latLng,
         coordinates: Util.coordinatesToString(latLng)
       };
@@ -121,6 +129,7 @@ let SiteModel = {
       coordinates: Util.coordinatesToString(latLng),
       launchAltitude: Altitude.getAltitudeInPilotUnits(site.launchAltitude),
       altitudeUnit: Altitude.getUserAltitudeUnit(),
+      launchType: site.launchType,
       flightNum: flightStats.total,
       flightNumThisYear: flightStats.thisYear,
       remarks: site.remarks
@@ -155,6 +164,7 @@ let SiteModel = {
       coordinates: Util.coordinatesToString(Util.getLatLngObj(site.lat, site.lng)),
       launchAltitude: launchAltitude.toString(),
       altitudeUnit: Altitude.getUserAltitudeUnit(),
+      launchType: site.launchType,
       remarks: site.remarks
     };
   },
@@ -177,6 +187,7 @@ let SiteModel = {
       coordinates: '',
       launchAltitude: '',
       altitudeUnit: Altitude.getUserAltitudeUnit(),
+      launchType: 'foot',
       remarks: ''
     };
   },
@@ -197,6 +208,7 @@ let SiteModel = {
       id: newSite.id,
       name: newSite.name,
       location: newSite.location,
+      launchType: newSite.launchType,
       remarks: newSite.remarks
     };
 

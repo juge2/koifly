@@ -102,6 +102,15 @@ const Site = db.define(
       }
     },
 
+    launchType: {
+      type: Sequelize.STRING,
+      allowNull: false,
+      defaultValue: 'foot',
+      validate: {
+        isIn: [ ['foot', 'winch'] ]
+      }
+    },
+
     see: {
       type: Sequelize.BOOLEAN,
       allowNull: false,
