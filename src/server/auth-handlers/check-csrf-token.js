@@ -11,7 +11,7 @@ import KoiflyError from '../../errors/error';
  * @param {Object} request
  * @param {Object} reply – Response toolkit.
  */
-export default function checkCsrfToken(request, reply) {
+export default function checkCsrfToken(request, h) {
   let requestCsrfToken;
   const cookieCsrfToken = request.state.csrf;
 
@@ -29,11 +29,11 @@ export default function checkCsrfToken(request, reply) {
     cookieCsrfToken !== requestCsrfToken
   ) {
     const csrfToken = generateToken(10);
-    const response = reply.response({ error: new KoiflyError(errorTypes.INVALID_CSRF_TOKEN) });
+    const response = h.response({ error: new KoiflyError(errorTypes.INVALID_CSRF_TOKEN) });
     response.state('csrf', csrfToken);
 
     return response;
   }
 
-  return reply.continue;
+  return h.continue;
 }

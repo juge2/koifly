@@ -9,7 +9,7 @@ import errorTypes from '../../errors/error-types';
  * @param {Object} reply
  * @return {Promise.<{status: string, location: string}>}
  */
-function locationHandler(request, reply) {
+function locationHandler(request, h) {
   const url = 'https://maps.googleapis.com/maps/api/geocode/json';
   const queryParams = {
     latlng: request.query.latLngString,
@@ -20,7 +20,7 @@ function locationHandler(request, reply) {
     .get(url, { params: queryParams })
     .then(res => res.data)
     .catch(() => {
-      return reply.response({
+      return h.response({
         error: new KoiflyError(errorTypes.THIRD_PARTY_ERROR)
       });
     });

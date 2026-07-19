@@ -89,7 +89,7 @@ async function start() {
     },
     redirectTo: false,
     keepAlive: true, // reset expiry date every time
-    validateFunc: checkAuthCookie
+    validate: checkAuthCookie
   });
 
 
@@ -112,7 +112,7 @@ async function start() {
   if (secrets.shouldUseSSL) {
     server.ext({
       type: 'onRequest',
-      method: (request, reply) => {
+      method: (request, h) => {
         const isBareHostname = (request.info.hostname === config.server.bareHost);
 
         if (isBareHostname) {
@@ -123,13 +123,13 @@ async function start() {
             port: config.server.httpsPort
           });
 
-          return reply
+          return h
             .redirect(url)
             .code(301)
             .takeover();
         }
 
-        return reply.continue;
+        return h.continue;
       }
     });
   }
@@ -210,9 +210,9 @@ async function start() {
         mode: 'try'
       }
     },
-    handler: function(request, reply) {
+    handler: function(request, h) {
       const isLoggedIn = request.auth.isAuthenticated;
-      return reply.view('about', { isLoggedIn: isLoggedIn }); // about.jsx in ./views
+      return h.view('about', { isLoggedIn: isLoggedIn }); // about.jsx in ./views
     }
   });
 
@@ -297,6 +297,14 @@ async function start() {
   });
 
   server.route({
+    method: 'GET',
+    path: '/api/ping',
+    handler: function() {
+      return 'pong';
+    }
+  });
+
+  server.route({
     method: 'POST',
     path: '/api/login',
     handler: loginHandler
@@ -324,16 +332,16 @@ async function start() {
   server.route({
     method: 'GET',
     path: '/email-verification/{pilotId}/{authToken}',
-    handler: function(request, reply) {
+    handler: function(request, h) {
       return verifyAuthToken(request.params.pilotId, request.params.authToken)
         .then(user => {
           return setAuthCookie(request, user.id, user.password);
         })
         .then(() => {
-          return reply.view('app'); // app.jsx in ./views
+          return h.view('app'); // app.jsx in ./views
         })
         .catch(() => {
-          return reply.redirect('/invalid-verification-link');
+          return h.redirect('/invalid-verification-link');
         });
     }
   });

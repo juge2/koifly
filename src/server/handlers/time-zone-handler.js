@@ -9,7 +9,7 @@ import errorTypes from '../../errors/error-types';
  * @param {Object} reply
  * @return {Promise.<{status: string, timeZoneId: string}>}
  */
-function timeZoneHandler(request, reply) {
+function timeZoneHandler(request, h) {
   const url = 'https://maps.googleapis.com/maps/api/timezone/json';
   const queryParams = {
     location: request.query.latLngString,
@@ -21,7 +21,7 @@ function timeZoneHandler(request, reply) {
     .get(url, { params: queryParams })
     .then(res => res.data)
     .catch(() => {
-      return reply.response({
+      return h.response({
         error: new KoiflyError(errorTypes.THIRD_PARTY_ERROR)
       });
     });

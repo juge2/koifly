@@ -43,12 +43,20 @@ const ajaxService = {
       data.csrf = csrfCookie;
     }
 
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[AJAX] ->', options.method, options.url);
+    }
+
     return new Promise((resolve, reject) => {
       const ajaxRequest = new XMLHttpRequest();
       ajaxRequest.timeout = dataServiceConstants.TIMEOUT;
 
       // If we got response from the server
       ajaxRequest.addEventListener('load', () => {
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[AJAX] <-', options.method, options.url, 'status:', ajaxRequest.status);
+        }
+
         if (ajaxRequest.status === 401) {
           reject(new KoiflyError(errorTypes.AUTHENTICATION_ERROR));
           return;
@@ -62,7 +70,7 @@ const ajaxService = {
         const serverResponse = JSON.parse(ajaxRequest.responseText);
 
         if (process.env.NODE_ENV === 'development') {
-          console.log('server response:', serverResponse); // eslint-disable-line no-console
+          console.log('server response:', serverResponse);
         }
 
         if (!serverResponse.error) {
@@ -86,8 +94,18 @@ const ajaxService = {
       });
 
       // If request failed
-      ajaxRequest.addEventListener('error', () => reject(new KoiflyError(errorTypes.AJAX_NETWORK_ERROR)));
-      ajaxRequest.addEventListener('timeout', () => reject(new KoiflyError(errorTypes.AJAX_NETWORK_ERROR)));
+      ajaxRequest.addEventListener('error', () => {
+        if (process.env.NODE_ENV === 'development') {
+          console.error('[AJAX] network error for', options.method, options.url);
+        }
+        reject(new KoiflyError(errorTypes.AJAX_NETWORK_ERROR));
+      });
+      ajaxRequest.addEventListener('timeout', () => {
+        if (process.env.NODE_ENV === 'development') {
+          console.error('[AJAX] timeout for', options.method, options.url);
+        }
+        reject(new KoiflyError(errorTypes.AJAX_NETWORK_ERROR));
+      });
 
       // Open and send request
       ajaxRequest.open(options.method, url);

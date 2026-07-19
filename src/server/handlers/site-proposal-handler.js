@@ -8,7 +8,7 @@ import errorTypes from '../../errors/error-types';
  * @param {Object} reply
  * @return {Promise.<{status: string, siteName: string}>}
  */
-function siteProposalHandler(request, reply) {
+function siteProposalHandler(request, h) {
   const url = 'http://www.paragliding.earth/api/geojson/getAroundLatLngSites.php';
   const queryParams = {
     lat: request.query.lat,
@@ -20,7 +20,7 @@ function siteProposalHandler(request, reply) {
     .get(url, { params: queryParams })
     .then(res => res.data)
     .catch(() => {
-      return reply.response({
+      return h.response({
         error: new KoiflyError(errorTypes.THIRD_PARTY_ERROR)
       });
     });
