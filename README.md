@@ -48,6 +48,15 @@ Simple Production Setup:
 
 
 
+## Tools
+
+* `node src/tools/merge-duplicate-sites.js [distance]` — Merge duplicate sites by name.
+  Groups sites with the same name, compares coordinates using great-circle distance,
+  and merges those within the threshold (default 100m). Sites without matching
+  coordinates are suffixed with the pilot's username to avoid name collisions.
+  Pass an optional distance in meters: `node src/tools/merge-duplicate-sites.js 500`.
+
+
 ## Author
 
 Anastasia Kaplina
