@@ -17,7 +17,7 @@ import Util from '../../utils/util';
  * weren't deleted).
  * @returns {Promise} - Resolved Promise if value is unique, rejected Promise if it isn't or DB read error occurred.
  */
-export default function isUnique(Model, record, fieldName, errorMsg, transaction, scopeAll = false) {
+export default function isUnique(Model, record, fieldName, errorMsg, transaction, scopeAll = false, scopeByPilotId = true) {
   const fieldValue = record[fieldName];
 
   // Unique value can't be empty.
@@ -37,7 +37,7 @@ export default function isUnique(Model, record, fieldName, errorMsg, transaction
   if (transaction) {
     queryOptions.transaction = transaction;
   }
-  if (record.pilotId) {
+  if (scopeByPilotId && record.pilotId) {
     queryOptions.where.pilotId = record.pilotId;
   }
 

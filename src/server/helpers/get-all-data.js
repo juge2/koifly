@@ -53,8 +53,10 @@ function getAllData(pilot, dateFrom) {
   let maxLastModified = pilot.updatedAt;
 
   const whereQuery = { pilotId: pilot.id };
+  const siteWhereQuery = {};
   if (dateFrom) {
     whereQuery.updatedAt = { [Sequelize.Op.gt]: dateFrom };
+    siteWhereQuery.updatedAt = { [Sequelize.Op.gt]: dateFrom };
     maxLastModified = dateFrom > maxLastModified ? dateFrom : maxLastModified;
   }
 
@@ -63,7 +65,7 @@ function getAllData(pilot, dateFrom) {
     .all([
       // parallel asynchronous requests
       Flight.scope(scope).findAll({ where: whereQuery }),
-      Site.scope(scope).findAll({ where: whereQuery }),
+      Site.scope(scope).findAll({ where: siteWhereQuery }),
       Glider.scope(scope).findAll({ where: whereQuery })
     ])
     .then(recordsSet => {

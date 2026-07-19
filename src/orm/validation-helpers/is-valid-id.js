@@ -21,11 +21,13 @@ export default function isValidId(Model, recordId, pilotId, errorMsg, transactio
 
   const queryOptions = {
     where: {
-      id: recordId,
-      pilotId: pilotId
+      id: recordId
     },
     attributes: [ 'id' ]
   };
+  if (pilotId) {
+    queryOptions.where.pilotId = pilotId;
+  }
   if (transaction) {
     queryOptions.transaction = transaction;
   }

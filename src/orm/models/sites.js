@@ -139,7 +139,7 @@ const Site = db.define(
     hooks: {
       beforeValidate: function(instance, options) {
         const errorMsg = errorMessages.DOUBLE_VALUE.replace('%field', 'Site');
-        return isUnique(Site, instance, 'name', errorMsg, options.transaction);
+        return isUnique(Site, instance, 'name', errorMsg, options.transaction, false, false);
       }
     },
 

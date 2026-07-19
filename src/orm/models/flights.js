@@ -132,7 +132,7 @@ const Flight = db.define(
 
         return Promise.all([
           isValidId(Glider, instance.gliderId, instance.pilotId, gliderErrorMsg, options.transaction),
-          isValidId(Site, instance.siteId, instance.pilotId, siteErrorMsg, options.transaction)
+          isValidId(Site, instance.siteId, null, siteErrorMsg, options.transaction)
         ]);
       }
     },

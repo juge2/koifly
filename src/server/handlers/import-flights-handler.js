@@ -68,7 +68,7 @@ function importFlightsHandler(request) {
     .all([
       convertCsvToJson(csvString),
       getPilotUnit(pilotId),
-      getRecordsNameHashMap(Site, pilotId),
+      getRecordsNameHashMap(Site, null),
       getRecordsNameHashMap(Glider, pilotId)
     ])
     .then(result => {
@@ -180,9 +180,10 @@ function getPilotUnit(pilotId) {
 function getRecordsNameHashMap(Model, pilotId, options = {}) {
   const hashMap = {};
 
-  const queryOptions = Object.assign({}, options, {
-    where: { pilotId: pilotId }
-  });
+  const queryOptions = Object.assign({}, options, {});
+  if (pilotId) {
+    queryOptions.where = { pilotId: pilotId };
+  }
 
   return Model
     .scope(ormConstants.SCOPES.visible)
