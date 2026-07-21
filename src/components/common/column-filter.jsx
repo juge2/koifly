@@ -1,5 +1,5 @@
 import React from 'react';
-import { arrayOf, func, object, string } from 'prop-types';
+import { arrayOf, func, object, oneOfType, string } from 'prop-types';
 import orderBy from 'lodash.orderby';
 
 
@@ -122,6 +122,11 @@ export default class ColumnFilter extends React.Component {
     }
   }
 
+  isPilotColumn() {
+    const dataKey = this.props.column.sortingKey || this.props.column.key;
+    return /pilot/i.test(dataKey);
+  }
+
   renderSelect() {
     const { value, currentPilotName } = this.props;
     const options = this.getSelectOptions();
@@ -135,7 +140,7 @@ export default class ColumnFilter extends React.Component {
           <input type='checkbox' checked={value === 'All' || !value} readOnly={true} />
           All
         </div>
-        {currentPilotName && (
+        {currentPilotName && this.isPilotColumn() && (
           <div
             className={'filter-option' + (this.isSelectedPilot(value, currentPilotName) ? ' active' : '')}
             onClick={() => this.togglePilot(currentPilotName)}
@@ -226,7 +231,7 @@ export default class ColumnFilter extends React.Component {
 ColumnFilter.propTypes = {
   column: object.isRequired,
   rows: arrayOf(object).isRequired,
-  value: string,
+  value: oneOfType([string, arrayOf(string), object]),
   onChange: func.isRequired,
   currentPilotName: string
 };
