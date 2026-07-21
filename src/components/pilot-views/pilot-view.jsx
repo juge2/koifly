@@ -206,13 +206,13 @@ export default class PilotView extends React.Component {
     );
 
     const acceptedItems = this.renderBuddyList('Accepted', buddiesState.accepted, b => (
-        <Button
-          caption='Remove'
-          buttonStyle='warning'
-          onClick={() => this.handleRemoveBuddy(b.id)}
-          isFitContent={true}
-          isAllScreens={true}
-        />
+      <Button
+        caption='Remove'
+        buttonStyle='warning'
+        onClick={() => this.handleRemoveBuddy(b.id)}
+        isFitContent={true}
+        isAllScreens={true}
+      />
     ));
 
     const incomingItems = this.renderBuddyList('Incoming', buddiesState.incoming, b => (
