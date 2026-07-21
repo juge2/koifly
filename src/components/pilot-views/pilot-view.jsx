@@ -156,12 +156,15 @@ export default class PilotView extends React.Component {
       <div>
         <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{title}</div>
         {buddies.map(b => (
-          <div key={b.id} style={{
-            display: 'flex',
-            alignItems: 'center',
-            padding: '8px 0',
-            borderBottom: '1px solid #eee'
-          }}>
+          <div
+            key={b.id}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              padding: '8px 0',
+              borderBottom: '1px solid #eee'
+            }}
+          >
             <span style={{ flex: 1 }}>{b.otherPilot.userName || b.otherPilot.email}</span>
             <div style={{ display: 'flex', gap: '4px' }}>
               {actionButtons(b)}
@@ -203,18 +206,41 @@ export default class PilotView extends React.Component {
     );
 
     const acceptedItems = this.renderBuddyList('Accepted', buddiesState.accepted, b => (
-      <Button caption='Remove' buttonStyle='warning' onClick={() => this.handleRemoveBuddy(b.id)} isFitContent={true} isAllScreens={true}/>
+        <Button
+          caption='Remove'
+          buttonStyle='warning'
+          onClick={() => this.handleRemoveBuddy(b.id)}
+          isFitContent={true}
+          isAllScreens={true}
+        />
     ));
 
     const incomingItems = this.renderBuddyList('Incoming', buddiesState.incoming, b => (
       <React.Fragment>
-        <Button caption='Accept' onClick={() => this.handleAcceptInvite(b.id)} isFitContent={true} isAllScreens={true}/>
-        <Button caption='Reject' buttonStyle='warning' onClick={() => this.handleRejectInvite(b.id)} isFitContent={true} isAllScreens={true}/>
+        <Button
+          caption='Accept'
+          onClick={() => this.handleAcceptInvite(b.id)}
+          isFitContent={true}
+          isAllScreens={true}
+        />
+        <Button
+          caption='Reject'
+          buttonStyle='warning'
+          onClick={() => this.handleRejectInvite(b.id)}
+          isFitContent={true}
+          isAllScreens={true}
+        />
       </React.Fragment>
     ));
 
     const outgoingItems = this.renderBuddyList('Sent', buddiesState.outgoing, b => (
-      <Button caption='Cancel' buttonStyle='warning' onClick={() => this.handleCancelInvite(b.id)} isFitContent={true} isAllScreens={true}/>
+      <Button
+        caption='Cancel'
+        buttonStyle='warning'
+        onClick={() => this.handleCancelInvite(b.id)}
+        isFitContent={true}
+        isAllScreens={true}
+      />
     ));
 
     return (

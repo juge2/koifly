@@ -78,7 +78,7 @@ export default class Table extends React.Component {
 
       if (column.filter.type === 'select') {
         const dataKey = column.sortingKey || column.key;
-        const selected = Array.isArray(filterValue) ? filterValue : [filterValue];
+        const selected = Array.isArray(filterValue) ? filterValue : [ filterValue ];
         rows = rows.filter(row => selected.includes(String(row[dataKey])));
       } else if (column.filter.type === 'range') {
         const dataKey = column.sortingKey || column.key;

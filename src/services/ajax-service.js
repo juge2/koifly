@@ -83,15 +83,9 @@ const ajaxService = {
 
       // If request failed
       ajaxRequest.addEventListener('error', () => {
-        if (process.env.NODE_ENV === 'development') {
-          console.error('[AJAX] network error for', options.method, options.url);
-        }
         reject(new KoiflyError(errorTypes.AJAX_NETWORK_ERROR));
       });
       ajaxRequest.addEventListener('timeout', () => {
-        if (process.env.NODE_ENV === 'development') {
-          console.error('[AJAX] timeout for', options.method, options.url);
-        }
         reject(new KoiflyError(errorTypes.AJAX_NETWORK_ERROR));
       });
 

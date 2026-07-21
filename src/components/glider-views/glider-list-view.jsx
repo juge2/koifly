@@ -19,7 +19,9 @@ export default class GliderListView extends React.Component {
   constructor() {
     super();
     let saved;
-    try { saved = JSON.parse(localStorage.getItem('koifly-glider-column-filters')); } catch (e) { /* ignore */ }
+    try {
+      saved = JSON.parse(localStorage.getItem('koifly-glider-column-filters'));
+    } catch (e) { /* ignore */ }
     this.state = {
       items: null,
       loadingError: null,

@@ -26,9 +26,19 @@ export default class ColumnFilter extends React.Component {
     }
   }
 
-  toggleOpen(e) {
-    e.stopPropagation();
-    this.setState(prev => ({ open: !prev.open }));
+  handleRangeChange(field, rawValue, currentV, bounds) {
+    const fromVal = field === 'from' ? rawValue : currentV.from;
+    const toVal = field === 'to' ? rawValue : currentV.to;
+    const fromNum = Number(fromVal);
+    const toNum = Number(toVal);
+
+    if ((fromVal === '' || fromVal === undefined) && (toVal === '' || toVal === undefined)) {
+      this.emitChange('All');
+    } else if (fromNum === bounds.min && toNum === bounds.max) {
+      this.emitChange('All');
+    } else {
+      this.emitChange({ from: fromVal, to: toVal });
+    }
   }
 
   getSelectOptions() {
@@ -45,7 +55,7 @@ export default class ColumnFilter extends React.Component {
       }
     });
 
-    const sorted = orderBy(values, [v => String(v).toUpperCase()]);
+    const sorted = orderBy(values, [ v => String(v).toUpperCase() ]);
     const pilots = currentPilotName
       ? sorted.filter(v => v !== currentPilotName)
       : sorted;
@@ -87,19 +97,9 @@ export default class ColumnFilter extends React.Component {
     return { min: min === Infinity ? '' : min, max: max === -Infinity ? '' : max };
   }
 
-  handleRangeChange(field, rawValue, currentV, bounds) {
-    const fromVal = field === 'from' ? rawValue : currentV.from;
-    const toVal = field === 'to' ? rawValue : currentV.to;
-    const fromNum = Number(fromVal);
-    const toNum = Number(toVal);
-
-    if ((fromVal === '' || fromVal === undefined) && (toVal === '' || toVal === undefined)) {
-      this.emitChange('All');
-    } else if (fromNum === bounds.min && toNum === bounds.max) {
-      this.emitChange('All');
-    } else {
-      this.emitChange({ from: fromVal, to: toVal });
-    }
+  toggleOpen(e) {
+    e.stopPropagation();
+    this.setState(prev => ({ open: !prev.open }));
   }
 
   isSelectedPilot(value, pilot) {
@@ -108,7 +108,7 @@ export default class ColumnFilter extends React.Component {
 
   togglePilot(opt) {
     const { value } = this.props;
-    const selected = Array.isArray(value) ? [...value] : [];
+    const selected = Array.isArray(value) ? [ ...value ] : [];
     const idx = selected.indexOf(opt);
     if (idx === -1) {
       selected.push(opt);
@@ -132,7 +132,7 @@ export default class ColumnFilter extends React.Component {
           className={'filter-option' + ((value === 'All' || !value) ? ' active' : '')}
           onClick={() => this.emitChange('All')}
         >
-          <input type='checkbox' checked={value === 'All' || !value} readOnly />
+          <input type='checkbox' checked={value === 'All' || !value} readOnly={true} />
           All
         </div>
         {currentPilotName && (
@@ -140,7 +140,7 @@ export default class ColumnFilter extends React.Component {
             className={'filter-option' + (this.isSelectedPilot(value, currentPilotName) ? ' active' : '')}
             onClick={() => this.togglePilot(currentPilotName)}
           >
-            <input type='checkbox' checked={this.isSelectedPilot(value, currentPilotName)} readOnly />
+            <input type='checkbox' checked={this.isSelectedPilot(value, currentPilotName)} readOnly={true} />
             Me
           </div>
         )}
@@ -150,7 +150,7 @@ export default class ColumnFilter extends React.Component {
             className={'filter-option' + (this.isSelectedPilot(value, opt) ? ' active' : '')}
             onClick={() => this.togglePilot(opt)}
           >
-            <input type='checkbox' checked={this.isSelectedPilot(value, opt)} readOnly />
+            <input type='checkbox' checked={this.isSelectedPilot(value, opt)} readOnly={true} />
             {opt}
           </div>
         ))}
@@ -200,9 +200,15 @@ export default class ColumnFilter extends React.Component {
           onClick={this.toggleOpen}
         >
           <svg viewBox='0 0 16 16' width='14' height='14' className='filter-svg'>
-            <path d='M2,2 L14,2 L9.5,8.5 L9.5,14 L6.5,14 L6.5,8.5 L2,2 Z' fill='none' stroke='currentColor' strokeWidth='1.5' strokeLinejoin='round'/>
-            <line x1='3.5' y1='2' x2='3.5' y2='3.5' stroke='currentColor' strokeWidth='1'/>
-            <line x1='12.5' y1='2' x2='12.5' y2='3.5' stroke='currentColor' strokeWidth='1'/>
+            <path d='M2,2 L14,2 L9.5,8.5 L9.5,14 L6.5,14 L6.5,8.5 L2,2 Z' fill='none' stroke='currentColor' strokeWidth='1.5'
+              strokeLinejoin='round'
+            />
+            <line x1='3.5' y1='2' x2='3.5' y2='3.5'
+              stroke='currentColor' strokeWidth='1'
+            />
+            <line x1='12.5' y1='2' x2='12.5' y2='3.5'
+              stroke='currentColor' strokeWidth='1'
+            />
           </svg>
         </span>
         {open && (
