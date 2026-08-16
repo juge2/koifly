@@ -6,18 +6,27 @@ import orderBy from 'lodash.orderby';
 export default class ColumnFilter extends React.Component {
   constructor() {
     super();
-    this.state = { open: false };
+    this.state = { open: false, dropdownAlign: 'center' };
     this.wrapperRef = React.createRef();
+    this.dropdownRef = React.createRef();
     this.handleClickOutside = this.handleClickOutside.bind(this);
     this.toggleOpen = this.toggleOpen.bind(this);
   }
 
   componentDidMount() {
     document.addEventListener('mousedown', this.handleClickOutside);
+    document.addEventListener('touchstart', this.handleClickOutside);
+  }
+
+  componentDidUpdate(prevProps, prevState) {
+    if (this.state.open && !prevState.open && this.dropdownRef.current) {
+      this.positionDropdown();
+    }
   }
 
   componentWillUnmount() {
     document.removeEventListener('mousedown', this.handleClickOutside);
+    document.removeEventListener('touchstart', this.handleClickOutside);
   }
 
   handleClickOutside(e) {
@@ -39,6 +48,20 @@ export default class ColumnFilter extends React.Component {
     } else {
       this.emitChange({ from: fromVal, to: toVal });
     }
+  }
+
+  positionDropdown() {
+    const dd = this.dropdownRef.current;
+    if (!dd) return;
+    const rect = dd.getBoundingClientRect();
+    const margin = 8;
+    let align = 'center';
+    if (rect.right > window.innerWidth - margin) {
+      align = 'right';
+    } else if (rect.left < margin) {
+      align = 'left';
+    }
+    this.setState({ dropdownAlign: align });
   }
 
   getSelectOptions() {
@@ -172,21 +195,73 @@ export default class ColumnFilter extends React.Component {
       <div className='filter-range'>
         <label className='filter-range-label'>
           <span className='filter-range-text'>from</span>
-          <input
-            type='number'
-            value={v.from}
-            onClick={e => e.stopPropagation()}
-            onChange={e => this.handleRangeChange('from', e.target.value, v, bounds)}
-          />
+          <div className='filter-range-input-wrap'>
+            <button
+              type='button'
+              className='filter-range-step filter-range-step--down'
+              tabIndex='-1'
+              onClick={e => {
+                e.stopPropagation();
+                const val = Number(v.from);
+                this.handleRangeChange('from', String(isNaN(val) ? Number(bounds.min) : val - 1), v, bounds);
+              }}
+            >
+              <svg viewBox='0 0 10 6' width='10' height='6'><path d='M0,0 L5,6 L10,0 Z' fill='currentColor'/></svg>
+            </button>
+            <input
+              type='number'
+              value={v.from}
+              onClick={e => e.stopPropagation()}
+              onChange={e => this.handleRangeChange('from', e.target.value, v, bounds)}
+            />
+            <button
+              type='button'
+              className='filter-range-step filter-range-step--up'
+              tabIndex='-1'
+              onClick={e => {
+                e.stopPropagation();
+                const val = Number(v.from);
+                this.handleRangeChange('from', String(isNaN(val) ? Number(bounds.min) : val + 1), v, bounds);
+              }}
+            >
+              <svg viewBox='0 0 10 6' width='10' height='6'><path d='M0,6 L5,0 L10,6 Z' fill='currentColor'/></svg>
+            </button>
+          </div>
         </label>
         <label className='filter-range-label'>
           <span className='filter-range-text'>to</span>
-          <input
-            type='number'
-            value={v.to}
-            onClick={e => e.stopPropagation()}
-            onChange={e => this.handleRangeChange('to', e.target.value, v, bounds)}
-          />
+          <div className='filter-range-input-wrap'>
+            <button
+              type='button'
+              className='filter-range-step filter-range-step--down'
+              tabIndex='-1'
+              onClick={e => {
+                e.stopPropagation();
+                const val = Number(v.to);
+                this.handleRangeChange('to', String(isNaN(val) ? Number(bounds.max) : val - 1), v, bounds);
+              }}
+            >
+              <svg viewBox='0 0 10 6' width='10' height='6'><path d='M0,0 L5,6 L10,0 Z' fill='currentColor'/></svg>
+            </button>
+            <input
+              type='number'
+              value={v.to}
+              onClick={e => e.stopPropagation()}
+              onChange={e => this.handleRangeChange('to', e.target.value, v, bounds)}
+            />
+            <button
+              type='button'
+              className='filter-range-step filter-range-step--up'
+              tabIndex='-1'
+              onClick={e => {
+                e.stopPropagation();
+                const val = Number(v.to);
+                this.handleRangeChange('to', String(isNaN(val) ? Number(bounds.max) : val + 1), v, bounds);
+              }}
+            >
+              <svg viewBox='0 0 10 6' width='10' height='6'><path d='M0,6 L5,0 L10,6 Z' fill='currentColor'/></svg>
+            </button>
+          </div>
         </label>
       </div>
     );
@@ -194,7 +269,7 @@ export default class ColumnFilter extends React.Component {
 
   render() {
     const { column } = this.props;
-    const { open } = this.state;
+    const { open, dropdownAlign } = this.state;
 
     if (!column.filter) return null;
 
@@ -217,7 +292,24 @@ export default class ColumnFilter extends React.Component {
           </svg>
         </span>
         {open && (
-          <div className='column-filter-dropdown' onClick={e => e.stopPropagation()}>
+          <div
+            className={'column-filter-dropdown column-filter-dropdown--' + dropdownAlign}
+            ref={this.dropdownRef}
+            onClick={e => e.stopPropagation()}
+          >
+            <button
+              type='button'
+              className='filter-close'
+              tabIndex='-1'
+              onClick={() => this.setState({ open: false })}
+            >
+              <svg viewBox='0 0 12 12' width='12' height='12'
+                fill='none' stroke='currentColor' strokeWidth='1.5' strokeLinecap='round'
+              >
+                <line x1='1' y1='1' x2='11' y2='11'/>
+                <line x1='11' y1='1' x2='1' y2='11'/>
+              </svg>
+            </button>
             {column.filter.type === 'select' && this.renderSelect()}
             {column.filter.type === 'range' && this.renderRange()}
           </div>

@@ -10,10 +10,20 @@ require('./table.less');
 export default class Table extends React.Component {
   constructor(props) {
     super(props);
-    this.state = {
-      sortingField: this.props.initialSortingField,
-      sortingDirection: this.getDefaultSortingDirection(this.props.initialSortingField)
-    };
+    let sortingField = this.props.initialSortingField;
+    let sortingDirection = this.getDefaultSortingDirection(this.props.initialSortingField);
+
+    if (this.props.storageKey) {
+      try {
+        const saved = JSON.parse(localStorage.getItem(this.props.storageKey));
+        if (saved && saved.field) {
+          sortingField = saved.field;
+          sortingDirection = saved.direction !== undefined ? saved.direction : sortingDirection;
+        }
+      } catch (e) { /* ignore */ }
+    }
+
+    this.state = { sortingField, sortingDirection };
 
     this.handleSorting = this.handleSorting.bind(this);
     this.handleRowClick = this.handleRowClick.bind(this);
@@ -21,19 +31,22 @@ export default class Table extends React.Component {
   }
 
   handleSorting(newSortingField) {
-    if (this.state.sortingField === newSortingField) {
-      this.setState(previousState => {
-        return {
-          sortingDirection: !previousState.sortingDirection
-        };
-      });
-      return;
-    }
+    this.setState(prev => {
+      let field;
+      let direction;
+      if (prev.sortingField === newSortingField) {
+        field = prev.sortingField;
+        direction = !prev.sortingDirection;
+      } else {
+        field = newSortingField;
+        direction = this.getDefaultSortingDirection(newSortingField);
+      }
 
-    const newSortingDirection = this.getDefaultSortingDirection(newSortingField);
-    this.setState({
-      sortingField: newSortingField,
-      sortingDirection: newSortingDirection
+      if (this.props.storageKey) {
+        localStorage.setItem(this.props.storageKey, JSON.stringify({ field, direction }));
+      }
+
+      return { sortingField: field, sortingDirection: direction };
     });
   }
 
@@ -126,8 +139,6 @@ export default class Table extends React.Component {
           key={'column-' + column.key}
           onClick={() => this.handleSorting(column.sortingKey || column.key)}
         >
-          <span className='th-label'>{column.label}</span>
-          <span className={arrowClassName}>{arrow}</span>
           <ColumnFilter
             column={column}
             rows={this.props.rows}
@@ -135,6 +146,8 @@ export default class Table extends React.Component {
             onChange={this.handleColumnFilterChange}
             currentPilotName={this.props.currentPilotName}
           />
+          <span className='th-label'>{column.label}</span>
+          <span className={arrowClassName}>{arrow}</span>
         </th>
       );
     });
@@ -188,5 +201,6 @@ Table.propTypes = {
   onColumnFilterChange: func,
   currentPilotName: string,
   initialSortingField: string.isRequired,
+  storageKey: string,
   onRowClick: func
 };

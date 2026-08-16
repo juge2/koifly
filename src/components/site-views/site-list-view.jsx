@@ -166,6 +166,7 @@ export default class SiteListView extends React.Component {
         onColumnFilterChange={this.handleColumnFilterChange}
         currentPilotName={currentPilotName}
         initialSortingField='name'
+        storageKey='koifly-site-sorting'
         onRowClick={this.handleRowClick}
       />
     );

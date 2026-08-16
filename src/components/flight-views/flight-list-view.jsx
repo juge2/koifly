@@ -161,6 +161,7 @@ export default class FlightListView extends React.Component {
         onColumnFilterChange={this.handleColumnFilterChange}
         currentPilotName={currentPilotName}
         initialSortingField='date'
+        storageKey='koifly-flight-sorting'
         onRowClick={this.handleRowClick}
       />
     );

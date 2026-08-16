@@ -148,6 +148,7 @@ export default class GliderListView extends React.Component {
         onColumnFilterChange={this.handleColumnFilterChange}
         currentPilotName={currentPilotName}
         initialSortingField='name'
+        storageKey='koifly-glider-sorting'
         onRowClick={this.handleRowClick}
       />
     );
