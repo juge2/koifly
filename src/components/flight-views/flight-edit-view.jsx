@@ -210,6 +210,8 @@ export default class FlightEditView extends React.Component {
       tz: flightTrackData.tz,
       siteId: flightTrackData.siteId || siteId,
       altitude: flightTrackData.maxAltitude || altitude,
+      maxAltitude: flightTrackData.maxAltitude,
+      minAltitude: flightTrackData.minAltitude,
       hours: flightTrackData.airtime ? flightTrackHoursMinutes.hours : hours,
       minutes: flightTrackData.airtime ? flightTrackHoursMinutes.minutes : minutes,
       igc,

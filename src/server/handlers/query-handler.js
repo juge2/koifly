@@ -100,6 +100,8 @@ function saveFlight(data, pilotId) {
       date: data.date,
       siteId: data.siteId,
       altitude: data.altitude,
+      maxAltitude: data.maxAltitude,
+      minAltitude: data.minAltitude,
       airtime: data.airtime,
       gliderId: data.gliderId,
       remarks: data.remarks,

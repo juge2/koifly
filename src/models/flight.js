@@ -82,12 +82,22 @@ let FlightModel = {
         date: flight.date.substring(0, 10),
         time: flight.time ? flight.time.substring(0, 5) : '',
         siteName: flight.siteId ? SiteModel.getSiteName(flight.siteId) : null,
-        altitude: Altitude.getAltitudeInPilotUnits(flight.altitude),
+        altitude: Altitude.getAltitudeInPilotUnits(flight.maxAltitude !== null && flight.maxAltitude !== undefined ? flight.maxAltitude : flight.altitude),
+        maxAltitude: flight.maxAltitude !== null && flight.maxAltitude !== undefined ? Altitude.getAltitudeInPilotUnits(flight.maxAltitude) : null,
+        minAltitude: flight.minAltitude !== null && flight.minAltitude !== undefined ? Altitude.getAltitudeInPilotUnits(flight.minAltitude) : null,
         airtime: flight.airtime,
         pilotName: flight.pilotName,
         createdAt: flight.createdAt
       };
     });
+  },
+
+  /**
+   * Get cached list output - only recomputes when store changes
+   * @returns {array|null|object} - cached list output
+   */
+  getListOutputCached() {
+    return this.getListOutputCached ? this.getListOutputCached() : this.getListOutput();
   },
 
   /**
@@ -117,8 +127,10 @@ let FlightModel = {
       siteId: flight.siteId,
       siteName: flight.siteId ? SiteModel.getSiteName(flight.siteId) : null,
       gliderName: flight.gliderId ? GliderModel.getGliderName(flight.gliderId) : null,
-      altitude: Altitude.getAltitudeInPilotUnits(flight.altitude),
-      altitudeAboveLaunch: this.getAltitudeAboveLaunch(flight.siteId, flight.altitude),
+      altitude: Altitude.getAltitudeInPilotUnits(flight.maxAltitude !== null && flight.maxAltitude !== undefined ? flight.maxAltitude : flight.altitude),
+      maxAltitude: flight.maxAltitude !== null && flight.maxAltitude !== undefined ? Altitude.getAltitudeInPilotUnits(flight.maxAltitude) : null,
+      minAltitude: flight.minAltitude !== null && flight.minAltitude !== undefined ? Altitude.getAltitudeInPilotUnits(flight.minAltitude) : null,
+      altitudeAboveLaunch: this.getAltitudeAboveLaunch(flight.siteId, flight.maxAltitude !== null && flight.maxAltitude !== undefined ? flight.maxAltitude : flight.altitude),
       airtime: flight.airtime,
       remarks: flight.remarks,
       igc: flight.igc,
@@ -148,7 +160,8 @@ let FlightModel = {
 
     // If altitude or hours or minutes is 0 show empty string to user
     // So user won't need to erase 0 before entering other value
-    const altitude = flight.altitude ? Altitude.getAltitudeInPilotUnits(flight.altitude) : '';
+    const maxAlt = flight.maxAltitude !== null && flight.maxAltitude !== undefined ? flight.maxAltitude : flight.altitude;
+    const altitude = maxAlt ? Altitude.getAltitudeInPilotUnits(maxAlt) : '';
     const hoursMinutes = Util.getHoursMinutes(flight.airtime);
 
     return {
@@ -163,7 +176,9 @@ let FlightModel = {
       minutes: hoursMinutes.minutes ? hoursMinutes.minutes.toString() : '',
       remarks: flight.remarks,
       igc: flight.igc,
-      igcFileName: flight.igcFileName
+      igcFileName: flight.igcFileName,
+      maxAltitude: flight.maxAltitude !== null && flight.maxAltitude !== undefined ? Altitude.getAltitudeInPilotUnits(flight.maxAltitude) : null,
+      minAltitude: flight.minAltitude !== null && flight.minAltitude !== undefined ? Altitude.getAltitudeInPilotUnits(flight.minAltitude) : null
     };
   },
 
@@ -234,6 +249,14 @@ let FlightModel = {
     const nextAltitude = parseInt(newFlight.altitude);
     const nextAltitudeUnit = newFlight.altitudeUnit;
     flight.altitude = Altitude.getAltitudeInMeters(nextAltitude, currentAltitude, nextAltitudeUnit);
+
+    // Include maxAltitude and minAltitude if provided (from IGC parsing)
+    if (newFlight.maxAltitude !== undefined && newFlight.maxAltitude !== null) {
+      flight.maxAltitude = parseFloat(newFlight.maxAltitude);
+    }
+    if (newFlight.minAltitude !== undefined && newFlight.minAltitude !== null) {
+      flight.minAltitude = parseFloat(newFlight.minAltitude);
+    }
 
     return flight;
   },

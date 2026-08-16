@@ -99,6 +99,18 @@ const Flight = db.define(
       defaultValue: null
     },
 
+    maxAltitude: {
+      type: Sequelize.FLOAT,
+      allowNull: true,
+      defaultValue: null
+    },
+
+    minAltitude: {
+      type: Sequelize.FLOAT,
+      allowNull: true,
+      defaultValue: null
+    },
+
     see: {
       type: Sequelize.BOOLEAN,
       allowNull: false,
@@ -121,6 +133,14 @@ const Flight = db.define(
         where: {
           see: true
         }
+      },
+      [ormConstants.SCOPES.list]: {
+        where: {
+          see: true
+        },
+        attributes: {
+          exclude: ['igc', 'igcFileName']
+        }
       }
     },
 
@@ -141,6 +161,10 @@ const Flight = db.define(
       {
         name: 'flightPilotId',
         fields: [ 'pilotId' ]
+      },
+      {
+        name: 'flightPilotIdUpdatedAt',
+        fields: ['pilotId', 'updatedAt']
       },
       {
         name: 'flightSiteId',

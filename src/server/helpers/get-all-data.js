@@ -47,7 +47,8 @@ function getAllData(pilot, dateFrom) {
   const result = {};
 
   // If no dateFrom => it's first request from the user, so retrieve all data
-  const scope = dateFrom ? ormConstants.SCOPES.all : ormConstants.SCOPES.visible;
+  // Use 'list' scope (excludes IGC blobs) for initial load, 'visible' for incremental
+  const scope = dateFrom ? ormConstants.SCOPES.visible : ormConstants.SCOPES.list;
 
   // We are sending all the data to the browser along with the latest date at which DB records were modified
   // So front-end can compare it with the latest date it has in its store
@@ -87,27 +88,36 @@ function getAllData(pilot, dateFrom) {
       const acceptedBuddies = recordsSet[3].filter(b => b.status === 'accepted');
 
       if (acceptedBuddies.length > 0) {
-        return Promise.all(
-          acceptedBuddies.map(buddy => {
-            const buddyWhere = { pilotId: buddy.otherPilot.id };
-            if (dateFrom) {
-              buddyWhere.updatedAt = { [Sequelize.Op.gt]: dateFrom };
-            }
-            return Promise.all([
-              Flight.scope(scope).findAll({ where: buddyWhere }),
-              Glider.scope(scope).findAll({ where: buddyWhere })
-            ]);
-          })
-        ).then(buddyDataSets => {
-          buddyDataSets.forEach(([buddyFlights, buddyGliders], index) => {
-            const buddyName = acceptedBuddies[index].otherPilot.userName ||
-                              acceptedBuddies[index].otherPilot.email;
+        // Batch fetch all buddy flights/gliders in single query using IN clause
+        const buddyPilotIds = acceptedBuddies.map(b => b.otherPilot.id);
+        const buddyWhere = { pilotId: { [Sequelize.Op.in]: buddyPilotIds } };
+        if (dateFrom) {
+          buddyWhere.updatedAt = { [Sequelize.Op.gt]: dateFrom };
+        }
 
-            getRecordsValues(buddyFlights).forEach(f => {
+        return Promise.all([
+          Flight.scope(scope).findAll({ where: buddyWhere, order: [ ['updatedAt', 'DESC'] ] }),
+          Glider.scope(scope).findAll({ where: buddyWhere })
+        ]).then(([buddyFlights, buddyGliders]) => {
+          // Group by pilotId for efficient merging
+          const flightsByPilot = {};
+          const glidersByPilot = {};
+          buddyFlights.forEach(f => {
+            (flightsByPilot[f.pilotId] = flightsByPilot[f.pilotId] || []).push(f);
+          });
+          buddyGliders.forEach(g => {
+            (glidersByPilot[g.pilotId] = glidersByPilot[g.pilotId] || []).push(g);
+          });
+
+          acceptedBuddies.forEach(buddy => {
+            const buddyName = buddy.otherPilot.userName || buddy.otherPilot.email;
+            const pilotId = buddy.otherPilot.id;
+
+            (flightsByPilot[pilotId] || []).forEach(f => {
               if (f.see !== false) f.pilotName = buddyName;
               result.flights.push(f);
             });
-            getRecordsValues(buddyGliders).forEach(g => {
+            (glidersByPilot[pilotId] || []).forEach(g => {
               if (g.see !== false) g.pilotName = buddyName;
               result.gliders.push(g);
             });
