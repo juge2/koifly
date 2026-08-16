@@ -1,5 +1,5 @@
 import errorTypes from '../../errors/error-types';
-import getPilotValuesForFrontend from './get-pilot-values';
+import getPilotValuesForFrontend, { computePilotStats } from './get-pilot-values';
 import KoiflyError from '../../errors/error';
 import ormConstants from '../../constants/orm-constants';
 import Sequelize from 'sequelize';
@@ -74,7 +74,8 @@ function getAllData(pilot, dateFrom) {
     ])
     .then(recordsSet => {
       // Values appear in the same order as we requested for them
-      result.flights = getRecordsValues(recordsSet[0]);
+      const ownFlights = getRecordsValues(recordsSet[0]);
+      result.flights = ownFlights;
       result.sites = getRecordsValues(recordsSet[1]);
       result.gliders = getRecordsValues(recordsSet[2]);
       result.buddies = recordsSet[3];
@@ -95,8 +96,11 @@ function getAllData(pilot, dateFrom) {
           buddyWhere.updatedAt = { [Sequelize.Op.gt]: dateFrom };
         }
 
+        // Limit initial buddy data load to prevent timeout (incremental loads use updatedAt filter)
+        const buddyLimit = dateFrom ? null : 100;
+
         return Promise.all([
-          Flight.scope(scope).findAll({ where: buddyWhere, order: [ ['updatedAt', 'DESC'] ] }),
+          Flight.scope(scope).findAll({ where: buddyWhere, limit: buddyLimit, order: [ ['updatedAt', 'DESC'] ] }),
           Glider.scope(scope).findAll({ where: buddyWhere })
         ]).then(([buddyFlights, buddyGliders]) => {
           // Group by pilotId for efficient merging
@@ -123,11 +127,11 @@ function getAllData(pilot, dateFrom) {
             });
           });
 
-          return finalizeResult(result, maxLastModified, pilot);
+          return finalizeResult(result, maxLastModified, pilot, ownFlights);
         });
       }
 
-      return finalizeResult(result, maxLastModified, pilot);
+      return finalizeResult(result, maxLastModified, pilot, ownFlights);
     })
     .catch(() => {
       throw new KoiflyError(errorTypes.DB_READ_ERROR);
@@ -156,17 +160,20 @@ function addPilotName(records, name) {
  * @param {Object} result
  * @param {string} maxLastModified
  * @param {Object} pilot
+ * @param {Array} ownFlights - User's own flights (excludes buddy flights) for stats computation
  * @returns {Object}
  */
-function finalizeResult(result, maxLastModified, pilot) {
+function finalizeResult(result, maxLastModified, pilot, ownFlights) {
   Object.values(result).forEach(records => {
     records.forEach(record => {
       maxLastModified = (record.updatedAt > maxLastModified) ? record.updatedAt : maxLastModified;
     });
   });
 
+  const pilotValues = getPilotValuesForFrontend(pilot);
+  const pilotStats = computePilotStats(ownFlights, pilot);
   result.lastModified = maxLastModified;
-  result.pilot = getPilotValuesForFrontend(pilot);
+  result.pilot = { ...pilotValues, ...pilotStats };
   return result;
 }
 

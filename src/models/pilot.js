@@ -62,27 +62,18 @@ let PilotModel = {
       return pilot;
     }
 
-    // require FlightModel here so as to avoid circle requirements
-    const FlightModel = require('./flight').default;
-
-    const flightNumTotal = pilot.initialFlightNum + FlightModel.getNumberOfFlights();
-    const flightNumThisYear = FlightModel.getNumberOfFlightsThisYear();
-    const airtimeTotal = pilot.initialAirtime + FlightModel.getTotalAirtime();
-    const siteNum = FlightModel.getNumberOfVisitedSites();
-    const gliderNum = FlightModel.getNumberOfUsedGliders();
-    const daysSinceLastFlight = FlightModel.getDaysSinceLastFlight();
-
+    // Stats are now computed server-side and included in pilot object
     return {
       email: pilot.email,
       userName: pilot.userName,
-      flightNumTotal: flightNumTotal,
-      flightNumThisYear: flightNumThisYear,
-      airtimeTotal: airtimeTotal,
-      siteNum: siteNum,
-      gliderNum: gliderNum,
+      flightNumTotal: pilot.flightNumTotal,
+      flightNumThisYear: pilot.flightNumThisYear,
+      airtimeTotal: pilot.airtimeTotal,
+      siteNum: pilot.siteNum,
+      gliderNum: pilot.gliderNum,
       altitudeUnit: pilot.altitudeUnit,
       distanceUnit: pilot.distanceUnit,
-      daysSinceLastFlight: daysSinceLastFlight
+      daysSinceLastFlight: pilot.daysSinceLastFlight
     };
   },
 
