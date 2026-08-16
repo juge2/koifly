@@ -93,14 +93,6 @@ let FlightModel = {
   },
 
   /**
-   * Get cached list output - only recomputes when store changes
-   * @returns {array|null|object} - cached list output
-   */
-  getListOutputCached() {
-    return this.getListOutputCached ? this.getListOutputCached() : this.getListOutput();
-  },
-
-  /**
    * Prepare data to show to user
    * @param {string|number} flightId
    * @returns {object|null} - flight
