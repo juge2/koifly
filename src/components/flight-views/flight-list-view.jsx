@@ -11,7 +11,7 @@ import NavigationMenu from '../common/menu/navigation-menu';
 import navigationService from '../../services/navigation-service';
 import Section from '../common/section/section';
 import SectionLoader from '../common/section/section-loader';
-import Table from '../common/table';
+import Table, { getFilteredRows } from '../common/table';
 import Util from '../../utils/util';
 import View from '../common/view';
 
@@ -66,46 +66,8 @@ export default class FlightListView extends React.Component {
     navigationService.goToItemView(FlightModel.keys.single, itemId);
   }
 
-  renderMobileTopMenu() {
-    return (
-      <MobileTopMenu
-        header='Flights'
-        rightButtonCaption='Add'
-        onRightClick={this.handleAddItem}
-      />
-    );
-  }
-
-  renderError() {
-    return (
-      <View onStoreModified={this.handleStoreModified} error={this.state.loadingError}>
-        <MobileTopMenu header='Flights'/>
-        {this.renderNavigationMenu()}
-        <ErrorBox error={this.state.loadingError} onTryAgain={this.handleStoreModified}/>
-      </View>
-    );
-  }
-
-  renderLoader() {
-    return (this.state.items === null) ? <SectionLoader/> : null;
-  }
-
-  renderEmptyList() {
-    if (this.state.items && this.state.items.length === 0) {
-      return <EmptyList ofWhichItems={FlightModel.keys.plural} onAdding={this.handleAddItem}/>;
-    }
-  }
-
-  renderNavigationMenu() {
-    return <NavigationMenu currentView={FlightModel.getModelKey()}/>;
-  }
-
-  renderAddItemButton() {
-    return <Button caption='Add Flight' onClick={this.handleAddItem}/>;
-  }
-
-  renderTable() {
-    const columns = [
+  getColumns() {
+    return [
       {
         key: 'formattedDate',
         label: 'Date',
@@ -141,8 +103,10 @@ export default class FlightListView extends React.Component {
         filter: { type: 'range' }
       }
     ];
+  }
 
-    const rows = (this.state.items || []).map(flight => (
+  getRows() {
+    return (this.state.items || []).map(flight => (
       Object.assign({}, flight, {
         dateNum: Number(flight.date.replace(/-/g, '')),
         formattedDate: Util.formatDateAndTime(flight.date, flight.time),
@@ -150,7 +114,60 @@ export default class FlightListView extends React.Component {
         formattedAirtime: Util.formatTime(flight.airtime)
       })
     ));
+  }
 
+  renderLoader() {
+    return (this.state.items === null) ? <SectionLoader/> : null;
+  }
+
+  renderEmptyList() {
+    if (this.state.items && this.state.items.length === 0) {
+      return <EmptyList ofWhichItems={FlightModel.keys.plural} onAdding={this.handleAddItem}/>;
+    }
+  }
+
+  renderMobileTopMenu() {
+    return (
+      <MobileTopMenu
+        header='Flights'
+        rightButtonCaption='Add'
+        onRightClick={this.handleAddItem}
+      />
+    );
+  }
+
+  renderNavigationMenu() {
+    return <NavigationMenu currentView={FlightModel.getModelKey()}/>;
+  }
+
+  renderAddItemButton() {
+    return <Button caption='Add Flight' onClick={this.handleAddItem}/>;
+  }
+
+  renderError() {
+    return (
+      <View onStoreModified={this.handleStoreModified} error={this.state.loadingError}>
+        <MobileTopMenu header='Flights'/>
+        {this.renderNavigationMenu()}
+        <ErrorBox error={this.state.loadingError} onTryAgain={this.handleStoreModified}/>
+      </View>
+    );
+  }
+
+  renderFlightCounter() {
+    const rows = this.getRows();
+    const columns = this.getColumns();
+    const shown = getFilteredRows(rows, columns, this.state.columnFilters).length;
+    return (
+      <span className='flight-count'>
+        {shown} of {rows.length} flights
+      </span>
+    );
+  }
+
+  renderTable() {
+    const columns = this.getColumns();
+    const rows = this.getRows();
     const currentPilotName = dataService.store.pilot && (dataService.store.pilot.userName || dataService.store.pilot.email);
 
     return (
@@ -183,7 +200,10 @@ export default class FlightListView extends React.Component {
         {this.renderNavigationMenu()}
 
         <Section>
-          <DesktopTopGrid leftElement={this.renderAddItemButton()}/>
+          <DesktopTopGrid
+            leftElement={this.renderAddItemButton()}
+            rightElement={this.renderFlightCounter()}
+          />
           {content}
           {this.renderLoader()}
         </Section>

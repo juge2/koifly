@@ -7,6 +7,41 @@ import Util from '../../utils/util';
 require('./table.less');
 
 
+// Applies column filters to a list of rows. Shared by Table and pages that need
+// to show how many rows are left after filtering.
+export function getFilteredRows(rows, columns, columnFilters) {
+  const filters = columnFilters || {};
+  let filtered = rows;
+
+  Object.keys(filters).forEach(columnKey => {
+    const filterValue = filters[columnKey];
+    if (filterValue === undefined || filterValue === null || filterValue === 'All') return;
+    if (Array.isArray(filterValue) && filterValue.length === 0) return;
+    if (typeof filterValue === 'object' && filterValue.from === '' && filterValue.to === '') return;
+
+    const column = (columns || []).find(c => c.key === columnKey);
+    if (!column || !column.filter) return;
+
+    if (column.filter.type === 'select') {
+      const dataKey = column.sortingKey || column.key;
+      const selected = Array.isArray(filterValue) ? filterValue : [ filterValue ];
+      filtered = filtered.filter(row => selected.includes(String(row[dataKey])));
+    } else if (column.filter.type === 'range') {
+      const dataKey = column.sortingKey || column.key;
+      filtered = filtered.filter(row => {
+        const val = Number(row[dataKey]);
+        if (isNaN(val)) return true;
+        if (filterValue.from !== '' && val < Number(filterValue.from)) return false;
+        if (filterValue.to !== '' && val > Number(filterValue.to)) return false;
+        return true;
+      });
+    }
+  });
+
+  return filtered;
+}
+
+
 export default class Table extends React.Component {
   constructor(props) {
     super(props);
@@ -77,35 +112,7 @@ export default class Table extends React.Component {
   }
 
   getFilteredRows() {
-    const filters = this.props.columnFilters || {};
-    let rows = this.props.rows;
-
-    Object.keys(filters).forEach(columnKey => {
-      const filterValue = filters[columnKey];
-      if (filterValue === undefined || filterValue === null || filterValue === 'All') return;
-      if (Array.isArray(filterValue) && filterValue.length === 0) return;
-      if (typeof filterValue === 'object' && filterValue.from === '' && filterValue.to === '') return;
-
-      const column = this.props.columns.find(c => c.key === columnKey);
-      if (!column || !column.filter) return;
-
-      if (column.filter.type === 'select') {
-        const dataKey = column.sortingKey || column.key;
-        const selected = Array.isArray(filterValue) ? filterValue : [ filterValue ];
-        rows = rows.filter(row => selected.includes(String(row[dataKey])));
-      } else if (column.filter.type === 'range') {
-        const dataKey = column.sortingKey || column.key;
-        rows = rows.filter(row => {
-          const val = Number(row[dataKey]);
-          if (isNaN(val)) return true;
-          if (filterValue.from !== '' && val < Number(filterValue.from)) return false;
-          if (filterValue.to !== '' && val > Number(filterValue.to)) return false;
-          return true;
-        });
-      }
-    });
-
-    return rows;
+    return getFilteredRows(this.props.rows, this.props.columns, this.props.columnFilters);
   }
 
   getSortingRows() {

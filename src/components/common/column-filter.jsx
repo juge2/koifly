@@ -11,6 +11,8 @@ export default class ColumnFilter extends React.Component {
     this.dropdownRef = React.createRef();
     this.handleClickOutside = this.handleClickOutside.bind(this);
     this.toggleOpen = this.toggleOpen.bind(this);
+    this.handleRangePointerDown = this.handleRangePointerDown.bind(this);
+    this.handleRangePointerEnd = this.handleRangePointerEnd.bind(this);
   }
 
   componentDidMount() {
@@ -36,17 +38,100 @@ export default class ColumnFilter extends React.Component {
   }
 
   handleRangeChange(field, rawValue, currentV, bounds) {
-    const fromVal = field === 'from' ? rawValue : currentV.from;
-    const toVal = field === 'to' ? rawValue : currentV.to;
-    const fromNum = Number(fromVal);
-    const toNum = Number(toVal);
+    let fromNum = field === 'from' ? Number(rawValue) : Number(currentV.from);
+    let toNum = field === 'to' ? Number(rawValue) : Number(currentV.to);
 
-    if ((fromVal === '' || fromVal === undefined) && (toVal === '' || toVal === undefined)) {
-      this.emitChange('All');
-    } else if (fromNum === bounds.min && toNum === bounds.max) {
+    // Fall back to the range bounds for missing or invalid values
+    if (isNaN(fromNum) || currentV.from === '' || currentV.from === undefined) {
+      fromNum = bounds.min;
+    }
+    if (isNaN(toNum) || currentV.to === '' || currentV.to === undefined) {
+      toNum = bounds.max;
+    }
+
+    // Keep the range ordered: from <= to
+    if (field === 'from' && fromNum > toNum) {
+      fromNum = toNum;
+    }
+    if (field === 'to' && toNum < fromNum) {
+      toNum = fromNum;
+    }
+
+    if (fromNum === bounds.min && toNum === bounds.max) {
       this.emitChange('All');
     } else {
-      this.emitChange({ from: fromVal, to: toVal });
+      this.emitChange({ from: String(fromNum), to: String(toNum) });
+    }
+  }
+
+  handleRangePointerDown(e) {
+    this._dragOrigin = { x: e.clientX, y: e.clientY };
+  }
+
+  handleRangePointerEnd(e) {
+    if (this._dragOrigin) {
+      const moved = Math.abs(e.clientX - this._dragOrigin.x) + Math.abs(e.clientY - this._dragOrigin.y);
+      this._dragOrigin = null;
+      // A real drag (pointer moved) must not trigger the bar's click-to-move on release
+      if (moved > 4) {
+        this._suppressClickUntil = Date.now() + 350;
+      }
+    }
+  }
+
+  handleRangeBarClick(e, from, to, bounds) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    if (!rect.width) return;
+
+    // Ignore interactions that bubble up from a thumb input, and clicks that
+    // follow a drag (they are the tail of a thumb drag, not a bar click).
+    if (e.target !== e.currentTarget) return;
+    if (this._suppressClickUntil && Date.now() < this._suppressClickUntil) return;
+
+    const pct = (e.clientX - rect.left) / rect.width;
+    const value = Math.round(bounds.min + (bounds.max - bounds.min) * pct);
+    const clamped = Math.max(bounds.min, Math.min(bounds.max, value));
+
+    const field = Math.abs(clamped - from) <= Math.abs(to - clamped) ? 'from' : 'to';
+    this.handleRangeChange(field, String(clamped), { from, to }, bounds);
+  }
+
+  handleRangeInput(field, rawValue, currentV, bounds) {
+    const text = v => (v === '' || v === undefined || isNaN(Number(v))) ? '' : String(Number(v));
+
+    const current = this.props.value && typeof this.props.value === 'object'
+      ? this.props.value
+      : {};
+    const currentFrom = text(current.from);
+    const currentTo = text(current.to);
+
+    const changed = rawValue === '' ? '' : text(rawValue);
+    const from = field === 'from' ? changed : currentFrom;
+    const to = field === 'to' ? changed : currentTo;
+
+    if (from === '' || to === '') {
+      if (from === '' && to === '') {
+        this.emitChange('All');
+      } else {
+        this.emitChange({ from, to });
+      }
+      return;
+    }
+
+    let fromNum = Number(from);
+    let toNum = Number(to);
+    if (fromNum > toNum) {
+      if (field === 'from') {
+        fromNum = toNum;
+      } else {
+        toNum = fromNum;
+      }
+    }
+
+    if (fromNum === bounds.min && toNum === bounds.max) {
+      this.emitChange('All');
+    } else {
+      this.emitChange({ from: String(fromNum), to: String(toNum) });
     }
   }
 
@@ -189,80 +274,97 @@ export default class ColumnFilter extends React.Component {
   renderRange() {
     const { value } = this.props;
     const bounds = this.getRangeBounds();
-    const v = value && value.from !== undefined ? value : { from: bounds.min, to: bounds.max };
+    const min = Number(bounds.min);
+    const max = Number(bounds.max);
+
+    if (isNaN(min) || isNaN(max)) {
+      return <div className='filter-range'>No data</div>;
+    }
+
+    let from = min;
+    let to = max;
+    if (value && value.from !== undefined && value.from !== '') {
+      const n = Number(value.from);
+      if (!isNaN(n)) from = n;
+    }
+    if (value && value.to !== undefined && value.to !== '') {
+      const n = Number(value.to);
+      if (!isNaN(n)) to = n;
+    }
+    if (from > to) {
+      const swap = from;
+      from = to;
+      to = swap;
+    }
+
+    const pct = n => (((n - min) / (max - min)) * 100).toFixed(2) + '%';
 
     return (
       <div className='filter-range'>
-        <label className='filter-range-label'>
-          <span className='filter-range-text'>from</span>
-          <div className='filter-range-input-wrap'>
-            <button
-              type='button'
-              className='filter-range-step filter-range-step--down'
-              tabIndex='-1'
-              onClick={e => {
-                e.stopPropagation();
-                const val = Number(v.from);
-                this.handleRangeChange('from', String(isNaN(val) ? Number(bounds.min) : val - 1), v, bounds);
-              }}
-            >
-              <svg viewBox='0 0 10 6' width='10' height='6'><path d='M0,0 L5,6 L10,0 Z' fill='currentColor'/></svg>
-            </button>
+        <div
+          className='filter-range-slider'
+          style={{ '--low': pct(from), '--high': pct(to) }}
+          onMouseDown={this.handleRangePointerDown}
+          onMouseUp={this.handleRangePointerEnd}
+          onClick={e => this.handleRangeBarClick(e, from, to, bounds)}
+        >
+          <input
+            type='range'
+            className='filter-range-slider--from'
+            min={min}
+            max={max}
+            step={1}
+            value={from}
+            onChange={e => this.handleRangeChange('from', e.target.value, { from, to }, bounds)}
+          />
+          <input
+            type='range'
+            className='filter-range-slider--to'
+            min={min}
+            max={max}
+            step={1}
+            value={to}
+            onChange={e => this.handleRangeChange('to', e.target.value, { from, to }, bounds)}
+          />
+        </div>
+        <div className='filter-range-values'>
+          <label className='filter-range-field'>
+            <span className='filter-range-field-label'>From</span>
             <input
               type='number'
-              value={v.from}
-              onClick={e => e.stopPropagation()}
-              onChange={e => this.handleRangeChange('from', e.target.value, v, bounds)}
+              className='filter-range-field-input'
+              min={min}
+              max={max}
+              step={1}
+              value={String(from)}
+              onChange={e => this.handleRangeInput('from', e.target.value, { from, to }, bounds)}
             />
-            <button
-              type='button'
-              className='filter-range-step filter-range-step--up'
-              tabIndex='-1'
-              onClick={e => {
-                e.stopPropagation();
-                const val = Number(v.from);
-                this.handleRangeChange('from', String(isNaN(val) ? Number(bounds.min) : val + 1), v, bounds);
-              }}
-            >
-              <svg viewBox='0 0 10 6' width='10' height='6'><path d='M0,6 L5,0 L10,6 Z' fill='currentColor'/></svg>
-            </button>
-          </div>
-        </label>
-        <label className='filter-range-label'>
-          <span className='filter-range-text'>to</span>
-          <div className='filter-range-input-wrap'>
-            <button
-              type='button'
-              className='filter-range-step filter-range-step--down'
-              tabIndex='-1'
-              onClick={e => {
-                e.stopPropagation();
-                const val = Number(v.to);
-                this.handleRangeChange('to', String(isNaN(val) ? Number(bounds.max) : val - 1), v, bounds);
-              }}
-            >
-              <svg viewBox='0 0 10 6' width='10' height='6'><path d='M0,0 L5,6 L10,0 Z' fill='currentColor'/></svg>
-            </button>
+          </label>
+          <span className='filter-range-sep'>–</span>
+          <label className='filter-range-field'>
+            <span className='filter-range-field-label'>To</span>
             <input
               type='number'
-              value={v.to}
-              onClick={e => e.stopPropagation()}
-              onChange={e => this.handleRangeChange('to', e.target.value, v, bounds)}
+              className='filter-range-field-input'
+              min={min}
+              max={max}
+              step={1}
+              value={String(to)}
+              onChange={e => this.handleRangeInput('to', e.target.value, { from, to }, bounds)}
             />
-            <button
-              type='button'
-              className='filter-range-step filter-range-step--up'
-              tabIndex='-1'
-              onClick={e => {
-                e.stopPropagation();
-                const val = Number(v.to);
-                this.handleRangeChange('to', String(isNaN(val) ? Number(bounds.max) : val + 1), v, bounds);
-              }}
-            >
-              <svg viewBox='0 0 10 6' width='10' height='6'><path d='M0,6 L5,0 L10,6 Z' fill='currentColor'/></svg>
-            </button>
-          </div>
-        </label>
+          </label>
+        </div>
+        <button
+          type='button'
+          className='filter-range-all'
+          tabIndex='-1'
+          onClick={e => {
+            e.stopPropagation();
+            this.emitChange('All');
+          }}
+        >
+          All
+        </button>
       </div>
     );
   }

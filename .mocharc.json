@@ -3,5 +3,6 @@
   "extension": ["js", "jsx"],
   "reporter": "spec",
   "require": ["@babel/register", "chai/register-expect", "jsdom-global/register", "ignore-styles"],
-  "timeout": 2000
+  "timeout": 2000,
+  "exit": true
 }
