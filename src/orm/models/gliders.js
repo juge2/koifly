@@ -91,6 +91,11 @@ const Glider = db.define(
         where: {
           see: true
         }
+      },
+      [ormConstants.SCOPES.list]: {
+        where: {
+          see: true
+        }
       }
     },
 

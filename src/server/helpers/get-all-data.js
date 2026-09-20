@@ -1,5 +1,5 @@
 import errorTypes from '../../errors/error-types';
-import getPilotValuesForFrontend, { computePilotStats } from './get-pilot-values';
+import getPilotValuesForFrontend from './get-pilot-values';
 import KoiflyError from '../../errors/error';
 import ormConstants from '../../constants/orm-constants';
 import Sequelize from 'sequelize';
@@ -40,8 +40,9 @@ function getRecordsValues(sequelizeRecordInstances) {
 /**
  * @param {object} pilot - sequelize pilot instance
  * @param {string|null} dateFrom - If provided, only changes since that date are returned
- * @returns {Promise.<{pilot: Object[], flights: Object[], sites: Object[], gliders: Object[], lastModified: string}>}
+ * @returns {Promise.<{pilot: Object[], flights: Object[], sites: Object[], gliders: Object[], lastModified: string, flightStats: Object}>}
  * lastModified - is the date of last modification in DB
+ * flightStats - computed from ALL flights (totalCount, totalAirtime, thisYearCount, siteCount, gliderCount)
  */
 function getAllData(pilot, dateFrom) {
   const result = {};
@@ -63,15 +64,24 @@ function getAllData(pilot, dateFrom) {
     maxLastModified = dateFrom > maxLastModified ? dateFrom : maxLastModified;
   }
 
+  const includeStats = !dateFrom; // Only include stats on initial full load
+
+  // Build promises array - always include flights, sites, gliders, buddies
+  const promises = [
+    Flight.scope(scope).findAll({ where: whereQuery, order: [ ['updatedAt', 'DESC'] ] }),
+    Site.scope(scope).findAll({ where: siteWhereQuery }),
+    Glider.scope(scope).findAll({ where: whereQuery }),
+    getBuddyRecords(pilot.id)
+  ];
+
+  // Add stats computation only on initial load (not incremental)
+  if (includeStats) {
+    promises.push(computeFlightStats(pilot.id, dateFrom));
+  }
+
   // Promise.all resolves only if every promises in the given list resolves
   return Promise
-    .all([
-      // parallel asynchronous requests
-      Flight.scope(scope).findAll({ where: whereQuery }),
-      Site.scope(scope).findAll({ where: siteWhereQuery }),
-      Glider.scope(scope).findAll({ where: whereQuery }),
-      getBuddyRecords(pilot.id)
-    ])
+    .all(promises)
     .then(recordsSet => {
       // Values appear in the same order as we requested for them
       const ownFlights = getRecordsValues(recordsSet[0]);
@@ -79,6 +89,7 @@ function getAllData(pilot, dateFrom) {
       result.sites = getRecordsValues(recordsSet[1]);
       result.gliders = getRecordsValues(recordsSet[2]);
       result.buddies = recordsSet[3];
+      result.flightStats = includeStats ? recordsSet[4] : { totalCount: 0, totalAirtime: 0, thisYearCount: 0, siteCount: 0, gliderCount: 0 };
 
       // Add pilotName to own items
       const ownName = pilot.userName || pilot.email;
@@ -133,7 +144,8 @@ function getAllData(pilot, dateFrom) {
 
       return finalizeResult(result, maxLastModified, pilot, ownFlights);
     })
-    .catch(() => {
+    .catch(err => {
+      console.error('getAllData error:', err);
       throw new KoiflyError(errorTypes.DB_READ_ERROR);
     });
 }
@@ -164,14 +176,40 @@ function addPilotName(records, name) {
  * @returns {Object}
  */
 function finalizeResult(result, maxLastModified, pilot, ownFlights) {
-  Object.values(result).forEach(records => {
-    records.forEach(record => {
+  // Only iterate over known array fields, not flightStats object
+  ['flights', 'sites', 'gliders', 'buddies'].forEach(key => {
+    (result[key] || []).forEach(record => {
       maxLastModified = (record.updatedAt > maxLastModified) ? record.updatedAt : maxLastModified;
     });
   });
 
   const pilotValues = getPilotValuesForFrontend(pilot);
-  const pilotStats = computePilotStats(ownFlights, pilot);
+  
+  // Use pre-computed stats from flightStats (computed from ALL flights, not just loaded page)
+  const flightStats = result.flightStats || { totalCount: 0, totalAirtime: 0, thisYearCount: 0, siteCount: 0, gliderCount: 0 };
+  
+  // Get last flight date from ownFlights for daysSinceLastFlight
+  let lastFlightDate = null;
+  ownFlights.forEach(f => {
+    if (!lastFlightDate || f.date > lastFlightDate) {
+      lastFlightDate = f.date;
+    }
+  });
+  let daysSinceLastFlight = null;
+  if (lastFlightDate) {
+    const millisecondsSince = Date.now() - Date.parse(lastFlightDate);
+    daysSinceLastFlight = Math.floor(millisecondsSince / (24 * 60 * 60 * 1000));
+  }
+
+  const pilotStats = {
+    flightNumTotal: pilot.initialFlightNum + flightStats.totalCount,
+    flightNumThisYear: flightStats.thisYearCount,
+    airtimeTotal: pilot.initialAirtime + flightStats.totalAirtime,
+    siteNum: flightStats.siteCount,
+    gliderNum: flightStats.gliderCount,
+    daysSinceLastFlight
+  };
+  
   result.lastModified = maxLastModified;
   result.pilot = { ...pilotValues, ...pilotStats };
   return result;
@@ -219,4 +257,52 @@ function getBuddyRecords(pilotId) {
         };
       });
     });
+  }
+
+
+/**
+ * Computes flight statistics from ALL flights (using COUNT/SUM queries, not loading all records)
+ * @param {number} pilotId
+ * @param {string|null} dateFrom - If provided, only count changes since that date (for incremental loads)
+ * @returns {Promise<Object>} - { totalCount, totalAirtime, thisYearCount, siteCount, gliderCount }
+ */
+function computeFlightStats(pilotId, dateFrom) {
+  const whereQuery = { pilotId, see: true };
+  if (dateFrom) {
+    whereQuery.updatedAt = { [Sequelize.Op.gt]: dateFrom };
+  }
+
+  const currentYear = new Date().getFullYear();
+
+  return Promise.all([
+    // Total count
+    Flight.count({ where: whereQuery }),
+    // Total airtime (sum)
+    Flight.sum('airtime', { where: whereQuery }),
+    // This year count
+    Flight.count({
+      where: {
+        ...whereQuery,
+        date: { [Sequelize.Op.gte]: `${currentYear}-01-01` }
+      }
+    }),
+    // Distinct site count
+    Flight.count({
+      where: whereQuery,
+      distinct: true,
+      col: 'siteId'
+    }),
+    // Distinct glider count
+    Flight.count({
+      where: whereQuery,
+      distinct: true,
+      col: 'gliderId'
+    })
+  ]).then(([totalCount, totalAirtime, thisYearCount, siteCount, gliderCount]) => ({
+    totalCount,
+    totalAirtime: totalAirtime || 0,
+    thisYearCount,
+    siteCount,
+    gliderCount
+  }));
 }

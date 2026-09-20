@@ -8,6 +8,7 @@ const DataService = function() {
   this.isRequestPending = false;
   this.lastModified = null;
   this.loadingError = null;
+  this.pendingFlightDetailFetches = new Set();
   this.store = {
     pilot: null,
     flights: null,
@@ -37,11 +38,11 @@ DataService.prototype.emit = function() {
  */
 DataService.prototype.requestServerData = function(isRetry = false) {
   if (this.isRequestPending) {
-    return;
+    return Promise.resolve();
   }
 
   this.isRequestPending = true;
-  ajaxService
+  return ajaxService
     .get('/api/data', { lastModified: this.lastModified })
     .then(serverResponse => {
       this.isRequestPending = false;
@@ -50,6 +51,40 @@ DataService.prototype.requestServerData = function(isRetry = false) {
     .catch(error => {
       this.isRequestPending = false;
       this.setLoadingError(error, isRetry);
+    });
+};
+
+
+/**
+ * Fetches the full record of a single flight (including igc and igcFileName)
+ * which was stripped from the list load and merges it into the store.
+ * @param {string|number} flightId
+ * @returns {Promise} - whether the request was successful
+ */
+DataService.prototype.fetchFlightDetails = function(flightId) {
+  if (!this.store.flights ||
+    !this.store.flights[flightId] ||
+    this.pendingFlightDetailFetches.has(flightId)
+  ) {
+    return Promise.resolve();
+  }
+
+  this.pendingFlightDetailFetches.add(flightId);
+  return ajaxService
+    .get('/api/flights/' + flightId)
+    .then(serverResponse => {
+      this.pendingFlightDetailFetches.delete(flightId);
+
+      const merged = Object.assign({}, this.store.flights[flightId], serverResponse);
+      delete merged._igcLoadFailed;
+      this.store.flights[flightId] = merged;
+      this.emit();
+    })
+    .catch(() => {
+      this.pendingFlightDetailFetches.delete(flightId);
+      // Mark the record so the flight won't be re-fetched every render
+      this.store.flights[flightId]._igcLoadFailed = true;
+      this.emit();
     });
 };
 
@@ -318,6 +353,7 @@ DataService.prototype.clearStore = function() {
   });
   this.lastModified = null;
   this.loadingError = null;
+  this.pendingFlightDetailFetches = new Set();
 };
 
 

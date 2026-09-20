@@ -2,7 +2,8 @@ const ormConstants = {
   // Scope names
   SCOPES: {
     all: null,
-    visible: 'see'
+    visible: 'see',
+    list: 'list'
   }
 };
 

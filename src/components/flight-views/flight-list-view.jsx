@@ -46,7 +46,7 @@ export default class FlightListView extends React.Component {
    * requests for presentational data form the Model and updates component's state
    */
   handleStoreModified() {
-    const storeContent = FlightModel.getListOutput();
+    const storeContent = FlightModel.getListOutputCached();
 
     if (storeContent && storeContent.error) {
       this.setState({ loadingError: storeContent.error });

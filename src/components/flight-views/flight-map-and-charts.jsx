@@ -28,6 +28,16 @@ export default class FightMapAndCharts extends React.Component {
     }
   }
 
+  componentDidUpdate(prevProps) {
+    // Igc is loaded lazily, so it can arrive after the initial mount
+    if (this.props.igc && this.props.igc !== prevProps.igc) {
+      const trackDetails = igcService.getIgcTrackDetails(this.props.igc);
+
+      this.setState({ trackDetails });
+      this.trackCoords = trackDetails.flightPoints.map(({ lat, lng }) => ({ lat, lng }));
+    }
+  }
+
   handleChartPointHover(index) {
     this.setState({ highlightedIndex: index });
   }

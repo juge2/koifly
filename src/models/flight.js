@@ -106,6 +106,11 @@ let FlightModel = {
       return flight;
     }
 
+    // Igc/igcFileName are stripped from the list load, fetch the full record on demand
+    if (flight.igc === undefined && !flight._igcLoadFailed) {
+      dataService.fetchFlightDetails(flightId);
+    }
+
     const flightNumbers = this.getFlightNumbers(flight);
 
     return {
@@ -148,6 +153,11 @@ let FlightModel = {
     const flight = this.getStoreContent(flightId);
     if (!flight || flight.error) {
       return flight;
+    }
+
+    // Igc/igcFileName are stripped from the list load, fetch the full record on demand
+    if (flight.igc === undefined && !flight._igcLoadFailed) {
+      dataService.fetchFlightDetails(flightId);
     }
 
     // If altitude or hours or minutes is 0 show empty string to user
@@ -488,6 +498,39 @@ let FlightModel = {
         },
         0
       );
+  },
+
+  /**
+   * Get cached list output, recomputing only when store content changes
+   * @returns {Array} - cached list output
+   */
+  getListOutputCached() {
+    const storeContent = this.getStoreContent();
+    if (!storeContent || storeContent.error) {
+      this._listOutputCache = null;
+      return storeContent;
+    }
+
+    // Check if store content has changed (by comparing reference or version)
+    const currentStoreVersion = this._getStoreVersion(storeContent);
+    if (this._listOutputCache && this._listOutputCacheVersion === currentStoreVersion) {
+      return this._listOutputCache.output;
+    }
+
+    // Recompute
+    const output = this.getListOutput();
+    this._listOutputCache = { output, storeContent };
+    this._listOutputCacheVersion = currentStoreVersion;
+    return output;
+  },
+
+  _getStoreVersion(storeContent) {
+    // Use a simple version based on store size and last item's updatedAt
+    const keys = Object.keys(storeContent);
+    if (keys.length === 0) return 'empty';
+    const lastKey = keys[keys.length - 1];
+    const lastItem = storeContent[lastKey];
+    return `${keys.length}:${lastItem?.updatedAt || ''}`;
   }
 };
 

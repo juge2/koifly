@@ -23,6 +23,7 @@ const checkAuthCookie = require('./server/auth-handlers/check-auth-cookie').defa
 const checkCsrfToken = require('./server/auth-handlers/check-csrf-token').default;
 
 const changePasswordHandler = require('./server/handlers/change-password-handler').default;
+const flightHandler = require('./server/handlers/flight-handler').default;
 const importFlightsHandler = require('./server/handlers/import-flights-handler').default;
 const locationHandler = require('./server/handlers/location-handler').default;
 const loginHandler = require('./server/handlers/login-handler').default;
@@ -246,6 +247,16 @@ async function start() {
       }
     },
     handler: queryHandler
+  });
+
+  server.route({
+    method: 'GET',
+    path: '/api/flights/{flightId}',
+    options: {
+      auth: 'session',
+      pre: [ checkCsrfToken ]
+    },
+    handler: flightHandler
   });
 
   server.route({
