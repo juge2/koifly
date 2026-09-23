@@ -158,4 +158,100 @@ describe('ColumnFilter slider', () => {
     fireEvent.change(container.querySelectorAll('input[type="number"]')[1], { target: { value: '' } });
     expect(filterValue).to.equal('All');
   });
+
+  it('renders date inputs for a date-range column and converts on change', () => {
+    const dateColumn = { key: 'd', label: 'Date', sortingKey: 'dnum', defaultSortingDirection: false, filter: { type: 'range', format: 'date' } };
+    const dateRows = [
+      { id: 1, dnum: 20260101 },
+      { id: 2, dnum: 20260615 },
+      { id: 3, dnum: 20261231 }
+    ];
+    let filterValue = { from: '20260101', to: '20261231' };
+    const { container, rerender } = render(
+      <ColumnFilter column={dateColumn} rows={dateRows} value={filterValue} onChange={(k, v) => { filterValue = v; }} />
+    );
+    fireEvent.click(container.querySelector('.column-filter-icon'));
+    let dates = container.querySelectorAll('input[type="date"]');
+    expect(dates.length).to.equal(2);
+    expect(dates[0].value).to.equal('2026-01-01');
+    expect(dates[1].value).to.equal('2026-12-31');
+    fireEvent.change(dates[0], { target: { value: '2026-06-01' } });
+    expect(filterValue).to.deep.equal({ from: '20260601', to: '20261231' });
+    rerender(
+      <ColumnFilter column={dateColumn} rows={dateRows} value={filterValue} onChange={(k, v) => { filterValue = v; }} />
+    );
+    dates = container.querySelectorAll('input[type="date"]');
+    fireEvent.change(dates[1], { target: { value: '' } });
+    expect(filterValue).to.deep.equal({ from: '20260601', to: '' });
+  });
+
+  it('slider only ever emits real calendar dates within the data bounds', () => {
+    const dateColumn = { key: 'd', label: 'Date', sortingKey: 'dnum', defaultSortingDirection: false, filter: { type: 'range', format: 'date' } };
+    const dateRows = [
+      { id: 1, dnum: 20260101 },
+      { id: 2, dnum: 20260615 },
+      { id: 3, dnum: 20261231 }
+    ];
+    const dayMs = 86400000;
+    const maxOffset = Math.round((Date.UTC(2026, 11, 31) - Date.UTC(2026, 0, 1)) / dayMs);
+    let filterValue = { from: '20260101', to: '20261231' };
+    const { container, rerender } = render(
+      <ColumnFilter column={dateColumn} rows={dateRows} value={filterValue} onChange={(k, v) => { filterValue = v; }} />
+    );
+    fireEvent.click(container.querySelector('.column-filter-icon'));
+
+    fireEvent.change(container.querySelector('.filter-range-slider--to'), { target: { value: String(Math.round(maxOffset * 0.5)) } });
+    expect(typeof filterValue.to).to.equal('string');
+    expect(filterValue.to).to.match(/^20\d{6}$/);
+    expect(Number(filterValue.to)).to.be.within(20260101, 20261231);
+    // and it round-trips into a real calendar date for the picker
+    rerender(
+      <ColumnFilter column={dateColumn} rows={dateRows} value={filterValue} onChange={(k, v) => { filterValue = v; }} />
+    );
+    const picker = container.querySelectorAll('input[type="date"]')[1];
+    expect(picker.value).to.match(/^\d{4}-\d{2}-\d{2}$/);
+    expect(new Date(picker.value).getTime()).to.be.within(Date.UTC(2026, 0, 1), Date.UTC(2026, 11, 31));
+  });
+
+  it('clamps the to side to from when the slider crosses', () => {
+    const dateColumn = { key: 'd', label: 'Date', sortingKey: 'dnum', defaultSortingDirection: false, filter: { type: 'range', format: 'date' } };
+    const dateRows = [
+      { id: 1, dnum: 20260101 },
+      { id: 2, dnum: 20260615 },
+      { id: 3, dnum: 20261231 }
+    ];
+    const minTs = Date.UTC(2026, 0, 1);
+    const byDate = n => Math.round((Date.UTC(n.slice(0, 4), n.slice(4, 6) - 1, n.slice(6, 8)) - minTs) / 86400000);
+    // March 1 lies before the current from value (June 1) -> crossing
+    const toOffset = byDate('20260301');
+    let filterValue = { from: '20260601', to: '20261231' };
+    const { container } = render(
+      <ColumnFilter column={dateColumn} rows={dateRows} value={filterValue} onChange={(k, v) => { filterValue = v; }} />
+    );
+    fireEvent.click(container.querySelector('.column-filter-icon'));
+    fireEvent.change(container.querySelector('.filter-range-slider--to'), { target: { value: String(toOffset) } });
+    expect(filterValue.to).to.equal(filterValue.from);
+  });
+
+  it('displays a real date even when a stored value is not a calendar date', () => {
+    const dateColumn = { key: 'd', label: 'Date', sortingKey: 'dnum', defaultSortingDirection: false, filter: { type: 'range', format: 'date' } };
+    const dateRows = [
+      { id: 1, dnum: 20260101 },
+      { id: 2, dnum: 20260615 },
+      { id: 3, dnum: 20261231 }
+    ];
+    const { container: c1 } = render(
+      <ColumnFilter column={dateColumn} rows={dateRows} value={{ from: '20260101', to: '20261299' }} onChange={() => {}} />
+    );
+    fireEvent.click(c1.querySelector('.column-filter-icon'));
+    let dates = c1.querySelectorAll('input[type="date"]');
+    expect(dates[1].value).to.equal('2026-12-31');
+
+    const { container: c2 } = render(
+      <ColumnFilter column={dateColumn} rows={dateRows} value={{ from: '20260101', to: '20261300' }} onChange={() => {}} />
+    );
+    fireEvent.click(c2.querySelector('.column-filter-icon'));
+    dates = c2.querySelectorAll('input[type="date"]');
+    expect(dates[1].value).to.equal('2026-12-31');
+  });
 });

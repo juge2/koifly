@@ -3,6 +3,48 @@ import { arrayOf, func, object, oneOfType, string } from 'prop-types';
 import orderBy from 'lodash.orderby';
 
 
+const DAY_MS = 86400000;
+
+const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
+
+// --- helpers for the `format: 'date'` range filter ---
+// The slider geometry runs over calendar time (timestamps), so every position
+// maps to a real date. Integers (YYYYMMDD dateNums) are only the serialized
+// filter/sort value.
+
+function dateNumToParts(dateNum) {
+  const s = String(dateNum).padStart(8, '0');
+  return {
+    year: Number(s.slice(0, 4)),
+    month: Number(s.slice(4, 6)),
+    day: Number(s.slice(6, 8))
+  };
+}
+
+function dateNumToTimestamp(dateNum) {
+  const { year, month, day } = dateNumToParts(dateNum);
+  return Date.UTC(year, month - 1, day);
+}
+
+function timestampToDateNum(ts) {
+  const d = new Date(ts);
+  return d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate();
+}
+
+function dateNumToInputValue(dateNum) {
+  const { year, month, day } = dateNumToParts(dateNum);
+  const mm = String(month).padStart(2, '0');
+  const dd = String(day).padStart(2, '0');
+  return `${year}-${mm}-${dd}`;
+}
+
+function dateStrToDateNum(dateStr) {
+  const m = String(dateStr).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return null;
+  return Number(m[1]) * 10000 + Number(m[2]) * 100 + Number(m[3]);
+}
+
+
 export default class ColumnFilter extends React.Component {
   constructor() {
     super();
@@ -89,11 +131,24 @@ export default class ColumnFilter extends React.Component {
     if (this._suppressClickUntil && Date.now() < this._suppressClickUntil) return;
 
     const pct = (e.clientX - rect.left) / rect.width;
-    const value = Math.round(bounds.min + (bounds.max - bounds.min) * pct);
-    const clamped = Math.max(bounds.min, Math.min(bounds.max, value));
+    let value;
+    if (this.isDateRange()) {
+      const minTs = dateNumToTimestamp(bounds.min);
+      const maxTs = dateNumToTimestamp(bounds.max);
+      const maxOffset = Math.max(0, Math.round((maxTs - minTs) / DAY_MS));
+      const offset = clamp(Math.round(pct * maxOffset), 0, maxOffset);
+      value = timestampToDateNum(minTs + offset * DAY_MS);
+    } else {
+      value = clamp(Math.round(bounds.min + (bounds.max - bounds.min) * pct), bounds.min, bounds.max);
+    }
 
-    const field = Math.abs(clamped - from) <= Math.abs(to - clamped) ? 'from' : 'to';
-    this.handleRangeChange(field, String(clamped), { from, to }, bounds);
+    const field = Math.abs(value - from) <= Math.abs(to - value) ? 'from' : 'to';
+    this.handleRangeChange(field, String(value), { from, to }, bounds);
+  }
+
+  handleRangeDateChange(field, isoStr, currentV, bounds) {
+    const num = isoStr === '' ? null : dateStrToDateNum(isoStr);
+    this.handleRangeInput(field, num === null ? '' : String(num), currentV, bounds);
   }
 
   handleRangeInput(field, rawValue, currentV, bounds) {
@@ -133,6 +188,10 @@ export default class ColumnFilter extends React.Component {
     } else {
       this.emitChange({ from: String(fromNum), to: String(toNum) });
     }
+  }
+
+  isDateRange() {
+    return this.props.column && this.props.column.filter && this.props.column.filter.format === 'date';
   }
 
   positionDropdown() {
@@ -267,6 +326,108 @@ export default class ColumnFilter extends React.Component {
             {opt}
           </div>
         ))}
+      </div>
+    );
+  }
+
+  renderRangeDate() {
+    const { value } = this.props;
+    const bounds = this.getRangeBounds();
+
+    const minTs = dateNumToTimestamp(bounds.min);
+    const maxTs = dateNumToTimestamp(bounds.max);
+    if (isNaN(minTs) || isNaN(maxTs)) {
+      return <div className='filter-range'>No data</div>;
+    }
+
+    const maxOffset = Math.max(0, Math.round((maxTs - minTs) / DAY_MS));
+    const total = maxOffset || 1;
+    const offsetAt = n => {
+      if (n === undefined || n === null || n === '' || isNaN(Number(n))) return null;
+      return Math.round((dateNumToTimestamp(Number(n)) - minTs) / DAY_MS);
+    };
+    const dateNumAt = off => timestampToDateNum(minTs + clamp(off, 0, maxOffset) * DAY_MS);
+    const pct = off => (clamp(off / total, 0, 1) * 100).toFixed(2) + '%';
+
+    let from = bounds.min;
+    let to = bounds.max;
+    if (value && value.from !== undefined && value.from !== '') {
+      const fromOff = offsetAt(value.from);
+      if (fromOff !== null) from = dateNumAt(fromOff);
+    }
+    if (value && value.to !== undefined && value.to !== '') {
+      const toOff = offsetAt(value.to);
+      if (toOff !== null) to = dateNumAt(toOff);
+    }
+    if (from > to) {
+      const swap = from;
+      from = to;
+      to = swap;
+    }
+
+    const fromOff = clamp(offsetAt(from), 0, maxOffset);
+    const toOff = clamp(offsetAt(to), 0, maxOffset);
+
+    return (
+      <div className='filter-range'>
+        <div
+          className='filter-range-slider'
+          style={{ '--low': pct(fromOff), '--high': pct(toOff) }}
+          onMouseDown={this.handleRangePointerDown}
+          onMouseUp={this.handleRangePointerEnd}
+          onClick={e => this.handleRangeBarClick(e, from, to, bounds)}
+        >
+          <input
+            type='range'
+            className='filter-range-slider--from'
+            min={0}
+            max={maxOffset}
+            step={1}
+            value={fromOff}
+            onChange={e => this.handleRangeChange('from', String(dateNumAt(Number(e.target.value))), { from, to }, bounds)}
+          />
+          <input
+            type='range'
+            className='filter-range-slider--to'
+            min={0}
+            max={maxOffset}
+            step={1}
+            value={toOff}
+            onChange={e => this.handleRangeChange('to', String(dateNumAt(Number(e.target.value))), { from, to }, bounds)}
+          />
+        </div>
+        <div className='filter-range-values'>
+          <label className='filter-range-field'>
+            <span className='filter-range-field-label'>From</span>
+            <input
+              type='date'
+              className='filter-range-field-input filter-range-field-input--date'
+              value={dateNumToInputValue(from)}
+              onChange={e => this.handleRangeDateChange('from', e.target.value, { from, to }, bounds)}
+            />
+          </label>
+          <span className='filter-range-sep'>–</span>
+          <label className='filter-range-field'>
+            <span className='filter-range-field-label'>To</span>
+            <input
+              type='date'
+              className='filter-range-field-input filter-range-field-input--date'
+              value={dateNumToInputValue(to)}
+              onChange={e => this.handleRangeDateChange('to', e.target.value, { from, to }, bounds)}
+            />
+          </label>
+        </div>
+        <button
+          type='button'
+          className='filter-range-all'
+          tabIndex='-1'
+          onClick={e => {
+            e.stopPropagation();
+            this.emitChange('All');
+          }}
+        >
+          All
+        </button>
       </div>
     );
   }
@@ -413,7 +574,7 @@ export default class ColumnFilter extends React.Component {
               </svg>
             </button>
             {column.filter.type === 'select' && this.renderSelect()}
-            {column.filter.type === 'range' && this.renderRange()}
+            {column.filter.type === 'range' && (this.isDateRange() ? this.renderRangeDate() : this.renderRange())}
           </div>
         )}
       </span>

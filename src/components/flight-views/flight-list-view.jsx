@@ -74,7 +74,7 @@ export default class FlightListView extends React.Component {
         defaultSortingDirection: false,
         sortingKey: 'dateNum',
         secondarySortingKey: 'time',
-        filter: { type: 'range' }
+        filter: { type: 'range', format: 'date' }
       },
       {
         key: 'siteName',
