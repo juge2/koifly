@@ -6,7 +6,8 @@ class StatsViewStore {
       selectedFlightIds: [],
       selectedSiteId: null,
       selectedYear: null,
-      selectedMonth: null
+      selectedMonth: null,
+      selectedPilotId: null
     };
 
     this._events = {
@@ -32,6 +33,10 @@ class StatsViewStore {
 
   get selectedMonth() {
     return this._state.selectedMonth;
+  }
+
+  get selectedPilotId() {
+    return this._state.selectedPilotId;
   }
 
   updateState(newValues) {

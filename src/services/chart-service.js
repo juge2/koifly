@@ -137,7 +137,12 @@ const chartService = {
     };
   },
 
-  getFlightStatsForEachSite() {
+  /**
+   * Aggregates flight stats grouped by site.
+   * @param {number|null} [pilotId] - if provided, only flights of this pilot are counted
+   * @returns {Object} - { years, bySite } or null/error when there is no flight data
+   */
+  getFlightStatsForEachSite(pilotId) {
     const flights = FlightModel.getStoreContent();
     if (!flights || flights.error) {
       return flights;
@@ -172,7 +177,9 @@ const chartService = {
       }
     }
 
-    Object.values(flights).filter(flight => !!flight.siteId).forEach(flight => {
+    Object.values(flights)
+      .filter(flight => !!flight.siteId && (!pilotId || flight.pilotId === pilotId))
+      .forEach(flight => {
       // Calculate flight max altitude bucket
       const siteAlt = siteStats[flight.siteId].launchAltitude;
       const bucketNumber = (flight.altitude - siteAlt) / bucketHeight;

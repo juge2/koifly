@@ -3,7 +3,9 @@ import Altitude from '../../utils/altitude';
 import AppLink from '../common/app-link';
 import BubbleChart from '../common/charts/buble-chart';
 import Button from '../common/buttons/button';
+import BuddyModel from '../../models/buddy';
 import chartService from '../../services/chart-service';
+import dataService from '../../services/data-service';
 import DropdownInput from '../common/inputs/dropdown-input';
 import EmptyList from '../common/empty-list';
 import ErrorBox from '../common/notice/error-box';
@@ -35,11 +37,13 @@ export default class StatsView extends React.Component {
       selectedFlightIds: statsViewStore.selectedFlightIds,
       selectedSiteId: statsViewStore.selectedSiteId,
       selectedYear: statsViewStore.selectedYear,
-      selectedMonth: statsViewStore.selectedMonth
+      selectedMonth: statsViewStore.selectedMonth,
+      selectedPilotId: statsViewStore.selectedPilotId
     };
 
     this.handleDataStoreModified = this.handleDataStoreModified.bind(this);
     this.handleSiteSelect = this.handleSiteSelect.bind(this);
+    this.handlePilotSelect = this.handlePilotSelect.bind(this);
     this.handleTimeRangeSelect = this.handleTimeRangeSelect.bind(this);
     this.handleUnzoom = this.handleUnzoom.bind(this);
     this.handleBubbleClick = this.handleBubbleClick.bind(this);
@@ -58,12 +62,13 @@ export default class StatsView extends React.Component {
       selectedFlightIds: statsViewStore.selectedFlightIds,
       selectedSiteId: statsViewStore.selectedSiteId,
       selectedYear: statsViewStore.selectedYear,
-      selectedMonth: statsViewStore.selectedMonth
+      selectedMonth: statsViewStore.selectedMonth,
+      selectedPilotId: statsViewStore.selectedPilotId
     });
   }
 
   handleDataStoreModified() {
-    const flightStats = chartService.getFlightStatsForEachSite();
+    const flightStats = chartService.getFlightStatsForEachSite(this.state.selectedPilotId);
     if (!flightStats) {
       return;
     }
@@ -85,6 +90,12 @@ export default class StatsView extends React.Component {
   handleSiteSelect(siteId) {
     const selectedSiteId = (this.state.selectedSiteId === siteId) ? null : siteId;
     statsViewStore.updateState({ selectedSiteId, selectedFlightIds: [] });
+  }
+
+  handlePilotSelect(pilotId) {
+    const selectedPilotId = pilotId || null;
+    statsViewStore.updateState({ selectedPilotId, selectedSiteId: null, selectedFlightIds: [] });
+    this.setState({ flightStats: chartService.getFlightStatsForEachSite(selectedPilotId) });
   }
 
   handleTimeRangeSelect(timeRange) {
@@ -117,6 +128,29 @@ export default class StatsView extends React.Component {
 
   handleBubbleClick(flightIds) {
     statsViewStore.updateState({ selectedFlightIds: flightIds });
+  }
+
+  getPilotOptions() {
+    const buddyList = BuddyModel.getListOutput();
+    const accepted = (buddyList && buddyList.accepted) || [];
+    if (!accepted.length) {
+      return null;
+    }
+
+    const currentPilot = dataService.store.pilot;
+    const currentPilotName = currentPilot && (currentPilot.userName || currentPilot.email);
+    const options = currentPilot && currentPilotName
+      ? [ { value: currentPilot.id, text: currentPilotName } ]
+      : [];
+
+    accepted.forEach(buddy => {
+      options.push({
+        value: buddy.otherPilot.id,
+        text: buddy.otherPilot.userName || buddy.otherPilot.email
+      });
+    });
+
+    return options;
   }
 
   getChartData() {
@@ -298,6 +332,7 @@ export default class StatsView extends React.Component {
     } = this.getChartData();
 
     const siteOptions = SiteModel.getSiteValueTextList();
+    const pilotOptions = this.getPilotOptions();
     const yearOptions = this.state.flightStats.years.map(year => ({ value: year, text: year }));
     const monthOptions = Util.shortMonthNames.map(month => ({ value: month, text: month }));
     const bubbleFlights = this.state.selectedFlightIds
@@ -325,6 +360,20 @@ export default class StatsView extends React.Component {
               }}
             />
           </SectionRow>
+
+          {!!pilotOptions && (
+            <SectionRow>
+              <DropdownInput
+                selectedValue={this.state.selectedPilotId}
+                options={pilotOptions}
+                labelText='Selected pilot:'
+                emptyText='All pilots'
+                onChangeFunc={(inputName, inputValue) => {
+                  this.handlePilotSelect(inputValue ? Number(inputValue) : null);
+                }}
+              />
+            </SectionRow>
+          )}
 
           <SectionRow>
             <DropdownInput
