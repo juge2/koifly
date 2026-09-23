@@ -196,15 +196,36 @@ export default class ColumnFilter extends React.Component {
 
   positionDropdown() {
     const dd = this.dropdownRef.current;
-    if (!dd) return;
-    const rect = dd.getBoundingClientRect();
+    const wrapper = this.wrapperRef.current;
+    if (!dd || !wrapper) return;
+
     const margin = 8;
+    const viewportWidth = window.innerWidth;
+    const wrapperRect = wrapper.getBoundingClientRect();
+
+    // --position: fixed-- so the measured width is stable and geometry is
+    // resolved against the viewport, not the (narrow) icon wrapper.
+    const width = Math.min(dd.offsetWidth, viewportWidth - 2 * margin);
+    const midX = wrapperRect.left + wrapperRect.width / 2;
+
+    let left;
     let align = 'center';
-    if (rect.right > window.innerWidth - margin) {
-      align = 'right';
-    } else if (rect.left < margin) {
+    if (midX - width / 2 >= margin && midX + width / 2 <= viewportWidth - margin) {
+      left = midX - width / 2;
+    } else if (wrapperRect.left + width <= viewportWidth - margin) {
+      left = wrapperRect.left;
       align = 'left';
+    } else if (wrapperRect.right - width >= margin) {
+      left = wrapperRect.right - width;
+      align = 'right';
+    } else {
+      left = margin;
+      align = 'fit';
     }
+
+    dd.style.left = `${Math.round(left)}px`;
+    dd.style.top = `${Math.round(wrapperRect.bottom + 4)}px`;
+    dd.style.width = `${Math.round(width)}px`;
     this.setState({ dropdownAlign: align });
   }
 
@@ -266,7 +287,7 @@ export default class ColumnFilter extends React.Component {
 
   toggleOpen(e) {
     e.stopPropagation();
-    this.setState(prev => ({ open: !prev.open }));
+    this.setState(prev => ({ open: !prev.open, dropdownAlign: 'center' }));
   }
 
   isSelectedPilot(value, pilot) {
