@@ -33,10 +33,62 @@
       right: @row-height * 0.5;
 
       & .flight-count {
+        display: block;
         line-height: @row-height;
-        font-size: 0.85em;
-        color: @dark-base;
+        text-align: right;
+        font-size: @font-mini;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+        color: @mild-base;
+
+        & .flight-count-shown {
+          font-size: 1.15em;
+          font-weight: 600;
+          color: @dark-blue;
+        }
+
+        & .flight-count-of {
+          color: @mild-base;
+        }
+
+        & .flight-count-total {
+          color: @dark-base;
+        }
+
+        & .flight-count-label {
+          color: @mild-base;
+        }
       }
+    }
+  }
+}
+
+.flight-count-row {
+  display: none;
+
+  @media (max-width: (@medium-viewport - 1)) {
+    display: block;
+    text-align: center;
+    padding: 6px 0 10px;
+    font-size: @font-mini;
+    font-variant-numeric: tabular-nums;
+    color: @mild-base;
+
+    & .flight-count-shown {
+      font-weight: 600;
+      color: @dark-blue;
+    }
+
+    & .flight-count-of {
+      color: @mild-base;
+    }
+
+    & .flight-count-total {
+      color: @dark-base;
+    }
+
+    & .flight-count-label {
+      color: @mild-base;
     }
   }
 }

@@ -158,9 +158,17 @@ export default class FlightListView extends React.Component {
     const rows = this.getRows();
     const columns = this.getColumns();
     const shown = getFilteredRows(rows, columns, this.state.columnFilters).length;
+    const active = shown !== rows.length;
     return (
       <span className='flight-count'>
-        {shown} of {rows.length} flights
+        {active
+          ? [
+            <span key='shown' className='flight-count-shown'>{shown}</span>,
+            <span key='of' className='flight-count-of'> of </span>
+          ]
+          : null}
+        <span className='flight-count-total'>{rows.length}</span>
+        <span className='flight-count-label'> flights</span>
       </span>
     );
   }
@@ -204,6 +212,9 @@ export default class FlightListView extends React.Component {
             leftElement={this.renderAddItemButton()}
             rightElement={this.renderFlightCounter()}
           />
+          <div className='flight-count-row'>
+            {this.renderFlightCounter()}
+          </div>
           {content}
           {this.renderLoader()}
         </Section>
